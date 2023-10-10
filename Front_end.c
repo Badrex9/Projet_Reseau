@@ -25,19 +25,71 @@
 #define LENGTH_RAW 1024
 
 void initAdresse(struct sockaddr_in * adresse, char* port);
+void initAdresse_ip(struct sockaddr_in * adresse, char* port, char* ip);
+int initSocket_client(struct sockaddr_in * adresse, char* port);
+int initSocket_server(struct sockaddr_in * adresse, char* port);
 int initSocket(struct sockaddr_in * adresse, char* port);
-void manageClient(int clients);
+char* manageClient(int clients);
 char *traitement_get_str(char buffer[BUFFER_LEN]);
-void traitement_get(char buffer[BUFFER_LEN], int clientSocket);
-void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket);
+char* traitement_get(char buffer[BUFFER_LEN], int clientSocket);
 
 int main(int argc, char* argv[]) {
 
 	struct sockaddr_in adresse;
 	initAdresse(&adresse, argv[1]);
-	int serverSocket = initSocket(&adresse, argv[1]);
+	int serverSocket = initSocket_server(&adresse, argv[1]);
+
+    //Initialisation connexion au serveur intermédiaire
+    struct sockaddr_in adresse2;
+    initAdresse_ip(&adresse2, argv[2], argv[3]);
+    int serverSocket2 = initSocket_client(&adresse2, argv[2]);
+
+
+    //Connexion au serveur intermédiaire
+    int status;
+    if ((status
+            = connect(serverSocket2, (struct sockaddr*)&adresse2,
+                    sizeof(adresse2)))< 0) {
+            printf("\nConnection Failed \n");
+            return -1;
+    }
+    char ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(adresse2.sin_addr), ip, INET_ADDRSTRLEN);
+    //Envoie du chemin au serveur intermédiaire
+
+
     while(1){
-        manageClient(serverSocket);
+        char* path = malloc(BUFFER_LEN);
+        //Traitement de la requête HTTP
+        path = manageClient(serverSocket);
+         
+        printf("Chemin:  zzzzzz %s\n", path);
+
+        send(serverSocket2, path, BUFFER_LEN, 0);
+
+        //Lecture du retour du serveur intermédiaire
+         // Descripteur de la socket du client
+        char buffer[BUFFER_LEN];
+
+        // Structure contenant l'adresse du client
+        struct sockaddr_in clientAdresse;
+        unsigned int addrLen = sizeof(clientAdresse);
+        int clientsocket;
+
+        if ((clientsocket = accept(serverSocket, (struct sockaddr *) &clientAdresse, &addrLen)) != -1) {
+            // Convertion de l'IP en texte
+            
+        }    
+        char ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, INET_ADDRSTRLEN);
+        printf("Connexion de %s:%i\n", ip, clientAdresse.sin_port);
+        //fcntl(clients, F_SETFL, O_NONBLOCK);
+        int len = read(clientsocket, buffer, BUFFER_LEN);
+
+        printf("Valeur dans le buffer: %s\n", buffer);
+
+        printf("Retour du SI: %s\n", buffer);
+
     }
 	return EXIT_SUCCESS;
 }
@@ -47,8 +99,33 @@ void initAdresse(struct sockaddr_in * adresse, char* port) {
 	(*adresse).sin_addr.s_addr = IP;
 	(*adresse).sin_port = htons( atoi(port));
 }
+
+// Initialisation de la structure sockaddr_in
+void initAdresse_ip(struct sockaddr_in * adresse, char* port, char* ip) {
+	(*adresse).sin_family = AF_INET;
+	(*adresse).sin_addr.s_addr = IP;
+	(*adresse).sin_port = htons( atoi(port));
+}
+
 // Démarrage de la socket serveur
-int initSocket(struct sockaddr_in * adresse, char* port){
+int initSocket_client(struct sockaddr_in * adresse, char* port){
+	// Descripteur de socket
+	int fdsocket;
+
+	// Création de la socket en TCP
+	if ((fdsocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+		printf("Echéc de la création: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	printf("Création de la socket\n");
+
+	printf("Fin de l'initialisation\n");
+
+    return fdsocket;
+}
+
+// Démarrage de la socket serveur
+int initSocket_server(struct sockaddr_in * adresse, char* port){
 	// Descripteur de socket
 	int fdsocket;
 
@@ -79,7 +156,7 @@ int initSocket(struct sockaddr_in * adresse, char* port){
 
 
 // On traite l'input des clients
-void manageClient(int clients) {
+char* manageClient(int clients) {
 	
 
     // Descripteur de la socket du client
@@ -88,6 +165,7 @@ void manageClient(int clients) {
     // Structure contenant l'adresse du client
     struct sockaddr_in clientAdresse;
     unsigned int addrLen = sizeof(clientAdresse);
+
 
     if ((clientSocket = accept(clients, (struct sockaddr *) &clientAdresse, &addrLen)) != -1) {
         // Convertion de l'IP en texte
@@ -99,11 +177,10 @@ void manageClient(int clients) {
 	//fcntl(clients, F_SETFL, O_NONBLOCK);
 	int len = read(clientSocket, buffer, BUFFER_LEN);
 
-	printf("Valeur dans le buffer: %s", buffer);
+	printf("Valeur dans le buffer: %s\n", buffer);
 
+    return traitement_get(buffer, clientSocket);;
 
-	traitement_get(buffer, clientSocket);
-	//write(clients, "Coucou\n", strlen("Coucou\n"));
 }
 
 char *traitement_get_str(char buffer[BUFFER_LEN]){
@@ -136,39 +213,21 @@ char *traitement_get_str(char buffer[BUFFER_LEN]){
 	} 
 }
 
-void traitement_get(char buffer[BUFFER_LEN], int clientSocket){
-	char *file = malloc(BUFFER_LEN);
-    char path[BUFFER_LEN] = "/Users/zamaien/Documents/Projet Réseau/DB/";
+char* traitement_get(char buffer[BUFFER_LEN], int clientSocket){
+	char *file = malloc(BUFFER_LEN*sizeof(char));
+    
+    char* path = malloc(BUFFER_LEN*sizeof(char));
+    
+    bzero(path,BUFFER_LEN);
+    strcat(path, "/Users/zamaien/Documents/Projet Réseau/DB/");
 
     //Traitement de la requete GET: extraction du nom du fichier à chercher + ajout du chemin correspondant
     file = traitement_get_str(buffer);
     strcat(path, file);
 
-	ouverture_et_lecture_fichier(path, clientSocket);
-
     printf("Le chemin est: %s\n", path);
 
+    return path;
     //Traitement de la requete GET: ouverture du fichier précédent pour l'envoyer au client
 
-}
-
-void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket){
-	FILE* fichier = NULL;
-    char chaine[LENGTH_RAW] = "";
-	
-    fichier = fopen(path, "r");
-	
-    if (fichier != NULL)
-    {
-		// Ajout de l'entête HTTP
-		send(clientSocket, "HTTP/1.1 200 OK\n", 16, 0); // \n compte comme 1 caractère
-		send(clientSocket, "\n", 1,0);
-        while (fgets(chaine, LENGTH_RAW, fichier) != NULL) 
-        {
-            send(clientSocket, chaine, strlen(chaine),0);
-			printf("%s", chaine);
-        }
- 
-        fclose(fichier);
-    }
 }

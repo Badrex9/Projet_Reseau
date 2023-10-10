@@ -24,25 +24,28 @@
 //Longueur des lignes dans le fichier
 #define LENGTH_RAW 1024
 
-void initAdresse(struct sockaddr_in * adresse, char* port);
+void initAdresse(struct sockaddr_in * adresse, char* port, char* ip);
 int initSocket(struct sockaddr_in * adresse, char* port);
-void manageClient(int clients);
+char* manageClient(int clients);
 char *traitement_get_str(char buffer[BUFFER_LEN]);
-void traitement_get(char buffer[BUFFER_LEN], int clientSocket);
+char* traitement_get(char buffer[BUFFER_LEN], int clientSocket);
 void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket);
 
 int main(int argc, char* argv[]) {
 
 	struct sockaddr_in adresse;
-	initAdresse(&adresse, argv[1]);
+	initAdresse(&adresse, argv[1], argv[2]);
 	int serverSocket = initSocket(&adresse, argv[1]);
     while(1){
-        manageClient(serverSocket);
+        char* path = malloc(sizeof(*path));
+        //Ouverture du fichier correspondant à la requête HTTP
+        path = manageClient(serverSocket);
+        ouverture_et_lecture_fichier(path, serverSocket); 
     }
 	return EXIT_SUCCESS;
 }
 // Initialisation de la structure sockaddr_in
-void initAdresse(struct sockaddr_in * adresse, char* port) {
+void initAdresse(struct sockaddr_in * adresse, char* port, char* ip) {
 	(*adresse).sin_family = AF_INET;
 	(*adresse).sin_addr.s_addr = IP;
 	(*adresse).sin_port = htons( atoi(port));
@@ -79,19 +82,19 @@ int initSocket(struct sockaddr_in * adresse, char* port){
 
 
 // On traite l'input des clients
-void manageClient(int clients) {
+char* manageClient(int clients) {
 	
-
     // Descripteur de la socket du client
-    char buffer[BUFFER_LEN];
+    char* buffer = malloc(BUFFER_LEN*sizeof(char));
+    bzero(buffer, BUFFER_LEN);
     int clientSocket;
     // Structure contenant l'adresse du client
     struct sockaddr_in clientAdresse;
     unsigned int addrLen = sizeof(clientAdresse);
 
+
     if ((clientSocket = accept(clients, (struct sockaddr *) &clientAdresse, &addrLen)) != -1) {
         // Convertion de l'IP en texte
-        
     }    
 	char ip[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, INET_ADDRSTRLEN);
@@ -99,56 +102,9 @@ void manageClient(int clients) {
 	//fcntl(clients, F_SETFL, O_NONBLOCK);
 	int len = read(clientSocket, buffer, BUFFER_LEN);
 
-	printf("Valeur dans le buffer: %s", buffer);
+	printf("Valeur dans le buffer: %s\n", buffer);
 
-
-	traitement_get(buffer, clientSocket);
-	//write(clients, "Coucou\n", strlen("Coucou\n"));
-}
-
-char *traitement_get_str(char buffer[BUFFER_LEN]){
-	if (buffer[0]=='G' && buffer[1]=='E' && buffer[2]=='T' && buffer[3]==' '){
-        int i=4;
-        int place_max = 4;
-		// Test de chemin .../..../..../index.html
-        while(buffer[i]!='\0' && buffer[i]!=' '){
-			if (buffer[i]=='/'){
-				place_max = i;
-			}
-            i+=1;
-		}
-
-        char* nom_de_fichier = malloc(BUFFER_LEN);
-        i = 0;
-
-        if (buffer[place_max]=='/') place_max+=1;
-        while(buffer[i+place_max]!='\0' && buffer[i+place_max]!=' '){
-            nom_de_fichier[i] = buffer[i+place_max];
-            i+=1;
-        }
-
-        printf("Le nom du fichier est: %s\n", nom_de_fichier);
-        return nom_de_fichier;
-    }
-	else{
-		printf("Pas de nom de fichier\n");
-		return "NON";
-	} 
-}
-
-void traitement_get(char buffer[BUFFER_LEN], int clientSocket){
-	char *file = malloc(BUFFER_LEN);
-    char path[BUFFER_LEN] = "/Users/zamaien/Documents/Projet Réseau/DB/";
-
-    //Traitement de la requete GET: extraction du nom du fichier à chercher + ajout du chemin correspondant
-    file = traitement_get_str(buffer);
-    strcat(path, file);
-
-	ouverture_et_lecture_fichier(path, clientSocket);
-
-    printf("Le chemin est: %s\n", path);
-
-    //Traitement de la requete GET: ouverture du fichier précédent pour l'envoyer au client
+    return buffer;
 
 }
 
@@ -168,7 +124,7 @@ void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket){
             send(clientSocket, chaine, strlen(chaine),0);
 			printf("%s", chaine);
         }
- 
+
         fclose(fichier);
     }
 }
