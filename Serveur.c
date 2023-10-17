@@ -156,11 +156,14 @@ void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket){
 	FILE* fichier = NULL;
     char chaine[LENGTH_RAW] = "";
 	
+	char envoie = malloc(1024);
+	bzero(envoie, 1024);
     fichier = fopen(path, "r");
 	
     if (fichier != NULL)
     {
 		// Ajout de l'entête HTTP
+		
 		send(clientSocket, "HTTP/1.1 200 OK\n", 16, 0); // \n compte comme 1 caractère
 		send(clientSocket, "\n", 1,0);
         while (fgets(chaine, LENGTH_RAW, fichier) != NULL) 
@@ -168,7 +171,7 @@ void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket){
             send(clientSocket, chaine, strlen(chaine),0);
 			printf("%s", chaine);
         }
- 
+
         fclose(fichier);
     }
 }

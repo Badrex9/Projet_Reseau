@@ -30,8 +30,6 @@ int initSocket_client(struct sockaddr_in * adresse, char* port);
 int initSocket_server(struct sockaddr_in * adresse, char* port);
 int initSocket(struct sockaddr_in * adresse, char* port);
 void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2);
-char *traitement_get_str(char buffer[BUFFER_LEN]);
-char* traitement_get(char buffer[BUFFER_LEN], int clientSocket);
 
 int main(int argc, char* argv[]) {
 
@@ -133,12 +131,6 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
 	//fcntl(clients, F_SETFL, O_NONBLOCK);
 	int len = read(clientSocket, buffer, longueur);
 
-    char* path = malloc(BUFFER_LEN);
-
-    path = traitement_get(buffer, clientSocket);
-
-	printf("Valeur dans le buffer: %s\n", buffer);
-
     //Connexion au serveur intermédiaire
     int status;
     if ((status
@@ -151,7 +143,7 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
     //Envoie du chemin au serveur intermédiaire
 
 
-    send(serverSocket2, path, longueur, 0);
+    send(serverSocket2, buffer, longueur, 0);
     int valread;
 
     bzero(buffer, longueur);
@@ -162,53 +154,4 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
 
     //Envoie de la réponse du server base de donnée au client
     send(clientSocket, buffer, longueur, 0);
-}
-
-char *traitement_get_str(char buffer[BUFFER_LEN]){
-	if (buffer[0]=='G' && buffer[1]=='E' && buffer[2]=='T' && buffer[3]==' '){
-        int i=4;
-        int place_max = 4;
-		// Test de chemin .../..../..../index.html
-        while(buffer[i]!='\0' && buffer[i]!=' '){
-			if (buffer[i]=='/'){
-				place_max = i;
-			}
-            i+=1;
-		}
-
-        char* nom_de_fichier = malloc(BUFFER_LEN);
-        i = 0;
-
-        if (buffer[place_max]=='/') place_max+=1;
-        while(buffer[i+place_max]!='\0' && buffer[i+place_max]!=' '){
-            nom_de_fichier[i] = buffer[i+place_max];
-            i+=1;
-        }
-
-        printf("Le nom du fichier est: %s\n", nom_de_fichier);
-        return nom_de_fichier;
-    }
-	else{
-		printf("Pas de nom de fichier\n");
-		return "NON";
-	} 
-}
-
-char* traitement_get(char buffer[BUFFER_LEN], int clientSocket){
-	char *file = malloc(BUFFER_LEN*sizeof(char));
-    
-    char* path = malloc(BUFFER_LEN*sizeof(char));
-    
-    bzero(path,BUFFER_LEN);
-    strcat(path, "/Users/zamaien/Documents/Projet Réseau/DB/");
-
-    //Traitement de la requete GET: extraction du nom du fichier à chercher + ajout du chemin correspondant
-    file = traitement_get_str(buffer);
-    strcat(path, file);
-
-    printf("Le chemin est: %s\n", path);
-
-    return path;
-    //Traitement de la requete GET: ouverture du fichier précédent pour l'envoyer au client
-
 }

@@ -26,7 +26,7 @@
 
 void initAdresse(struct sockaddr_in * adresse, char* port, char* ip);
 int initSocket(struct sockaddr_in * adresse, char* port);
-char* manageClient(int clients);
+void manageClient(int clients);
 char *traitement_get_str(char buffer[BUFFER_LEN]);
 char* traitement_get(char buffer[BUFFER_LEN], int clientSocket);
 void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket);
@@ -37,10 +37,8 @@ int main(int argc, char* argv[]) {
 	initAdresse(&adresse, argv[1], argv[2]);
 	int serverSocket = initSocket(&adresse, argv[1]);
     while(1){
-        char* path = malloc(sizeof(*path));
         //Ouverture du fichier correspondant à la requête HTTP
-        path = manageClient(serverSocket);
-        ouverture_et_lecture_fichier(path, serverSocket); 
+        manageClient(serverSocket);
     }
 	return EXIT_SUCCESS;
 }
@@ -82,7 +80,7 @@ int initSocket(struct sockaddr_in * adresse, char* port){
 
 
 // On traite l'input des clients
-char* manageClient(int clients) {
+void manageClient(int clients) {
 	
     // Descripteur de la socket du client
     char* buffer = malloc(BUFFER_LEN*sizeof(char));
@@ -104,7 +102,10 @@ char* manageClient(int clients) {
 
 	printf("Valeur dans le buffer: %s\n", buffer);
 
-    return buffer;
+	// Passage en mode non bloquant
+	fcntl(clientSocket, F_SETFL, O_NONBLOCK);
+
+	ouverture_et_lecture_fichier(buffer, clientSocket); 
 
 }
 
@@ -114,17 +115,19 @@ void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket){
 	
     fichier = fopen(path, "r");
 	
+	char* envoie = malloc(BUFFER_LEN*sizeof(char));
+	bzero(envoie, BUFFER_LEN);
+
     if (fichier != NULL)
     {
 		// Ajout de l'entête HTTP
-		send(clientSocket, "HTTP/1.1 200 OK\n", 16, 0); // \n compte comme 1 caractère
-		send(clientSocket, "\n", 1,0);
+		strcat(envoie, "HTTP/1.1 200 OK\n\n");
         while (fgets(chaine, LENGTH_RAW, fichier) != NULL) 
         {
-            send(clientSocket, chaine, strlen(chaine),0);
-			printf("%s", chaine);
+			strcat(envoie, chaine);
         }
-
+		printf("%s\n", envoie);
         fclose(fichier);
+		send(clientSocket, envoie, strlen(envoie), MSG_DONTWAIT);
     }
 }
