@@ -31,6 +31,16 @@ int initSocket_server(struct sockaddr_in * adresse, char* port);
 int initSocket(struct sockaddr_in * adresse, char* port);
 void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2);
 
+struct Buff_vir
+{
+	char ip[15];
+	int id;
+	int offset;
+	int lentgh;
+};
+
+
+
 int main(int argc, char* argv[]) {
 
 	struct sockaddr_in adresse;
@@ -112,9 +122,10 @@ int initSocket_server(struct sockaddr_in * adresse, char* port){
 void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
 	
     int longueur = 1024;
+    char buffer_fichier[longueur];
+    struct Buff_vir* buffer = malloc(sizeof(*buffer));
 
-    // Descripteur de la socket du client
-    char buffer[longueur];
+
     int clientSocket;
     // Structure contenant l'adresse du client
     struct sockaddr_in clientAdresse;
@@ -129,7 +140,7 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
 	inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, INET_ADDRSTRLEN);
 	printf("Connexion de %s:%i\n", ip, clientAdresse.sin_port);
 	//fcntl(clients, F_SETFL, O_NONBLOCK);
-	int len = read(clientSocket, buffer, longueur);
+	int len = read(clientSocket, buffer_fichier, sizeof(buffer_fichier));
 
     //Connexion au serveur intermédiaire
     int status;
@@ -143,15 +154,15 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
     //Envoie du chemin au serveur intermédiaire
 
 
-    send(serverSocket2, buffer, longueur, 0);
+    send(serverSocket2, buffer_fichier, sizeof(buffer_fichier), 0);
     int valread;
 
-    bzero(buffer, longueur);
+    bzero(buffer, sizeof(*buffer));
 
     //Lecture du fichier
-    valread = read(serverSocket2, buffer, longueur);
-    printf("Valeur dans le buffer: %s\n", buffer);
+    valread = read(serverSocket2, buffer, sizeof(*buffer));
+    //printf("Valeur dans le buffer: %s\n", buffer);
 
     //Envoie de la réponse du server base de donnée au client
-    send(clientSocket, buffer, longueur, 0);
+    send(clientSocket, buffer, sizeof(*buffer), 0);
 }

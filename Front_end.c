@@ -33,6 +33,16 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2);
 char *traitement_get_str(char buffer[BUFFER_LEN]);
 char* traitement_get(char buffer[BUFFER_LEN], int clientSocket);
 
+
+struct Buff_vir
+{
+	char ip[15];
+	int id;
+	int offset;
+	int lentgh;
+};
+
+
 int main(int argc, char* argv[]) {
 
 	struct sockaddr_in adresse;
@@ -154,14 +164,19 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
     send(serverSocket2, path, longueur, 0);
     int valread;
 
-    bzero(buffer, longueur);
+    struct Buff_vir* buffer_virtuel = malloc(sizeof(*buffer_virtuel));
+
+
+    bzero(buffer_virtuel, sizeof(*buffer_virtuel));
 
     //Lecture du fichier
-    valread = read(serverSocket2, buffer, longueur);
-    printf("Valeur dans le buffer: %s\n", buffer);
-
+    valread = read(serverSocket2, buffer_virtuel, sizeof(*buffer_virtuel));
+    printf("Valeur de l'id: %d\n", buffer_virtuel->id);
+    printf("Valeur de l'ip: %s\n", buffer_virtuel->ip);
+    printf("Valeur de la longueur: %d\n", buffer_virtuel->lentgh);
+    printf("Valeur de l'offset: %d\n", buffer_virtuel->offset);
     //Envoie de la réponse du server base de donnée au client
-    send(clientSocket, buffer, longueur, 0);
+    //send(clientSocket, buffer, longueur, 0);
 }
 
 char *traitement_get_str(char buffer[BUFFER_LEN]){
