@@ -34,7 +34,7 @@ char* ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket);
 
 struct Buff_vir
 {
-	char ip[15];
+	char ip[30];
 	int id;
 	int offset;
 	int lentgh;
@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 	while(1){
         //On ajoute au buffer_share la valeur demandé en l'IS
 		
-        socket = manageClient(serverSocket, *buffer_share + buffer_virtuel->offset);
+        socket = manageClient(serverSocket, *(buffer_share + buffer_virtuel->offset));
 		printf("Longueur: %d\n", buffer_virtuel->lentgh);
 		//On ajoute la longueur de la valeur précédente
 		buffer_virtuel->lentgh = sizeof(*(buffer_share + buffer_virtuel->offset));
@@ -143,9 +143,9 @@ int manageClient(int clients, char* buffer_share) {
 
 	// Passage en mode non bloquant
 	fcntl(clientSocket, F_SETFL, O_NONBLOCK);
-
-	strcpy(buffer_share, ouverture_et_lecture_fichier(buffer, clientSocket)); 
-
+	if(ouverture_et_lecture_fichier(buffer, clientSocket)==NULL){
+		strcpy(buffer_share, ouverture_et_lecture_fichier(buffer, clientSocket)); 
+	}
 	return clientSocket;
 }
 
