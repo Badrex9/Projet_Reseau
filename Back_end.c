@@ -23,6 +23,8 @@
 #define EXIT_WORD "exit"
 //Longueur des lignes dans le fichier
 #define LENGTH_RAW 1024
+// Longueur buffer_share
+#define BUFFER_SHARE_LEN 1000
 
 void initAdresse(struct sockaddr_in * adresse, char* port, char* ip);
 int initSocket(struct sockaddr_in * adresse, char* port);
@@ -48,8 +50,10 @@ int main(int argc, char* argv[]) {
 	initAdresse(&adresse, argv[1], argv[2]);
 	int serverSocket = initSocket(&adresse, argv[1]);
 	int socket = 0;
-	char** buffer_share = malloc(sizeof(**buffer_share));
+	char buffer_share[BUFFER_SHARE_LEN];
 	struct Buff_vir* buffer_virtuel = malloc(sizeof(*buffer_virtuel));
+	bzero(buffer_share, BUFFER_SHARE_LEN*sizeof(char));
+	bzero(buffer_virtuel, sizeof(*buffer_virtuel));
 	//Initialisation de l'offset du buffer_share
 	buffer_virtuel->offset = 0;
 	buffer_virtuel->lentgh = 0;
@@ -60,23 +64,27 @@ int main(int argc, char* argv[]) {
 	int i = 1;
 	//Initialisation de @IP
 	strcpy(buffer_virtuel->ip, argv[2]);
+	printf("Valeur de l'ip: %s\n", buffer_virtuel->ip);
 	printf("Longueur: %d\n", buffer_virtuel->lentgh);
 	while(1){
         //On ajoute au buffer_share la valeur demandé en l'IS
 		
-        socket = manageClient(serverSocket, *buffer_share + buffer_virtuel->offset);
+        socket = manageClient(serverSocket, buffer_share + buffer_virtuel->lentgh);
 		printf("Longueur: %d\n", buffer_virtuel->lentgh);
 		//On ajoute la longueur de la valeur précédente
-		buffer_virtuel->lentgh = sizeof(*(buffer_share + buffer_virtuel->offset));
+		//buffer_virtuel->lentgh = sizeof(*(buffer_share + buffer_virtuel->offset));
 		//On envoie à l'IS 
-		
+		printf("Valeur de l'id: %d\n", buffer_virtuel->id);
+    	printf("Valeur de l'ip: %s\n", buffer_virtuel->ip);
+    	printf("Valeur de la longueur: %d\n", buffer_virtuel->lentgh);
+   		printf("Valeur de l'offset: %d\n", buffer_virtuel->offset);
 		send(socket, buffer_virtuel, sizeof(buffer_virtuel),0);
 
 		//On incrémente la valeur de l'offset en fonction de la précédente et la nouvelle longueur
-		buffer_virtuel->offset += buffer_virtuel->lentgh;
-		*(decalage + i) = buffer_virtuel->lentgh + *(decalage + i-1);
-		buffer_virtuel->id ++;
-		i+=1;
+		//buffer_virtuel->offset += buffer_virtuel->lentgh;
+		//*(decalage + i) = buffer_virtuel->lentgh + *(decalage + i-1);
+		//buffer_virtuel->id ++;
+		//i+=1;
     }
 
 	return EXIT_SUCCESS;
@@ -143,9 +151,7 @@ int manageClient(int clients, char* buffer_share) {
 
 	// Passage en mode non bloquant
 	fcntl(clientSocket, F_SETFL, O_NONBLOCK);
-
-	strcpy(buffer_share, ouverture_et_lecture_fichier(buffer, clientSocket)); 
-
+	strcpy(buffer_share, ouverture_et_lecture_fichier(buffer, clientSocket));
 	return clientSocket;
 }
 
