@@ -24,22 +24,21 @@
 //Longueur des lignes dans le fichier
 #define LENGTH_RAW 1024
 
+struct Buff_vir
+{
+	char ip[15];
+	long id;
+	int offset;
+	int lentgh;
+};
+
+
 void initAdresse(struct sockaddr_in * adresse, char* port);
 void initAdresse_ip(struct sockaddr_in * adresse, char* port, char* ip);
 int initSocket_client(struct sockaddr_in * adresse, char* port);
 int initSocket_server(struct sockaddr_in * adresse, char* port);
 int initSocket(struct sockaddr_in * adresse, char* port);
 void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2);
-
-struct Buff_vir
-{
-	char ip[15];
-	int id;
-	int offset;
-	int lentgh;
-};
-
-
 
 int main(int argc, char* argv[]) {
 
@@ -52,7 +51,9 @@ int main(int argc, char* argv[]) {
     initAdresse_ip(&adresse2, argv[2], argv[3]);
     int serverSocket2 = initSocket_client(&adresse2, argv[2]);
 
-    manageClient(serverSocket, serverSocket2, adresse2);
+	//while(1){
+		manageClient(serverSocket, serverSocket2, adresse2);
+	//}
 
 	return EXIT_SUCCESS;
 }
@@ -125,7 +126,6 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
     char buffer_fichier[longueur];
     struct Buff_vir* buffer = malloc(sizeof(*buffer));
 
-
     int clientSocket;
     // Structure contenant l'adresse du client
     struct sockaddr_in clientAdresse;
@@ -156,13 +156,19 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
 
     send(serverSocket2, buffer_fichier, sizeof(buffer_fichier), 0);
     int valread;
-
     bzero(buffer, sizeof(*buffer));
 
+	struct Buff_vir* buffer_virtuel = malloc(sizeof(struct Buff_vir));
+    bzero(buffer_virtuel, sizeof(struct Buff_vir));
     //Lecture du fichier
-    valread = read(serverSocket2, buffer, sizeof(*buffer));
+    valread = read(serverSocket2, buffer_virtuel, sizeof(struct Buff_vir));
     //printf("Valeur dans le buffer: %s\n", buffer);
 
+    printf("Valeur de l'id: %lu\n", buffer_virtuel->id);
+    printf("Valeur de l'ip: %s\n", buffer_virtuel->ip);
+    printf("Valeur de la longueur: %d\n", buffer_virtuel->lentgh);
+    printf("Valeur de l'offset: %d\n", buffer_virtuel->offset);
+
     //Envoie de la réponse du server base de donnée au client
-    send(clientSocket, buffer, sizeof(*buffer), 0);
+    send(clientSocket, buffer_virtuel, sizeof(struct Buff_vir), 0);
 }

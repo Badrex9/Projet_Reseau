@@ -37,11 +37,15 @@ char* traitement_get(char buffer[BUFFER_LEN], int clientSocket);
 struct Buff_vir
 {
 	char ip[15];
-	int id;
+	long id;
 	int offset;
 	int lentgh;
 };
 
+struct request{
+	long id; 
+	int lentgh;
+};
 
 int main(int argc, char* argv[]) {
 
@@ -54,7 +58,10 @@ int main(int argc, char* argv[]) {
     initAdresse_ip(&adresse2, argv[2], argv[3]);
     int serverSocket2 = initSocket_client(&adresse2, argv[2]);
 
-    manageClient(serverSocket, serverSocket2, adresse2);
+    //while(1){
+        manageClient(serverSocket, serverSocket2, adresse2);
+    //}
+    
 
 	return EXIT_SUCCESS;
 }
@@ -164,19 +171,39 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
     send(serverSocket2, path, longueur, 0);
     int valread;
 
-    struct Buff_vir* buffer_virtuel = malloc(sizeof(*buffer_virtuel));
-
-
-    bzero(buffer_virtuel, sizeof(*buffer_virtuel));
+    struct Buff_vir* buffer_virtuel = malloc(sizeof(struct Buff_vir));
+    bzero(buffer_virtuel, sizeof(struct Buff_vir));
 
     //Lecture du fichier
-    valread = read(serverSocket2, buffer_virtuel, sizeof(*buffer_virtuel));
-    printf("Valeur de l'id: %d\n", buffer_virtuel->id);
+    valread = read(serverSocket2, buffer_virtuel, sizeof(struct Buff_vir));
+    printf("Valeur de l'id: %lu\n", buffer_virtuel->id);
     printf("Valeur de l'ip: %s\n", buffer_virtuel->ip);
     printf("Valeur de la longueur: %d\n", buffer_virtuel->lentgh);
     printf("Valeur de l'offset: %d\n", buffer_virtuel->offset);
     //Envoie de la réponse du server base de donnée au client
     //send(clientSocket, buffer, longueur, 0);
+
+    struct sockaddr_in adresse;
+	initAdresse(&adresse, buffer_virtuel->ip);
+	int serverSocket = initSocket_client(&adresse, buffer_virtuel->ip);
+
+    if ((status
+            = connect(serverSocket, (struct sockaddr*)&adresse,
+                    sizeof(adresse)))< 0) {
+            printf("\nConnection Failed \n");
+    }
+    struct request* request = malloc(sizeof(struct request));
+    bzero(request, sizeof(struct request));
+    request->id = buffer_virtuel->id;
+    request->lentgh = buffer_virtuel->lentgh;
+    inet_ntop(AF_INET, &(adresse2.sin_addr), ip, INET_ADDRSTRLEN);
+    send(serverSocket, request, sizeof(struct request), 0);
+
+    valread = read(serverSocket, buffer, request->lentgh);
+    printf("Le buffer vaut: %s\n", buffer);
+    send(clientSocket,buffer, request->lentgh,0);
+    
+
 }
 
 char *traitement_get_str(char buffer[BUFFER_LEN]){
