@@ -38,7 +38,7 @@ void initAdresse_ip(struct sockaddr_in * adresse, char* port, char* ip);
 int initSocket_client(struct sockaddr_in * adresse, char* port);
 int initSocket_server(struct sockaddr_in * adresse, char* port);
 int initSocket(struct sockaddr_in * adresse, char* port);
-void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2);
+void manageClient(int clients, char* port, struct sockaddr_in adresse2);
 
 int main(int argc, char* argv[]) {
 
@@ -48,14 +48,12 @@ int main(int argc, char* argv[]) {
 
     //Initialisation connexion au serveur intermédiaire
     struct sockaddr_in adresse2;
-    initAdresse_ip(&adresse2, argv[2], argv[3]);
+    initAdresse(&adresse2, argv[2]);
     int serverSocket2 = initSocket_client(&adresse2, argv[2]);
 
 	//while(1){
-		manageClient(serverSocket, serverSocket2, adresse2);
+		manageClient(serverSocket, argv[2], adresse2);
 	//}
-
-	return EXIT_SUCCESS;
 }
 // Initialisation de la structure sockaddr_in
 void initAdresse(struct sockaddr_in * adresse, char* port) {
@@ -120,8 +118,8 @@ int initSocket_server(struct sockaddr_in * adresse, char* port){
 
 
 // On traite l'input des clients
-void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
-	
+void manageClient(int clients, char* port, struct sockaddr_in adresse2) {
+	printf("Retour ici\n");
     int longueur = 1024;
     char buffer_fichier[longueur];
     struct Buff_vir* buffer = malloc(sizeof(*buffer));
@@ -130,45 +128,51 @@ void manageClient(int clients, int serverSocket2, struct sockaddr_in adresse2) {
     // Structure contenant l'adresse du client
     struct sockaddr_in clientAdresse;
     unsigned int addrLen = sizeof(clientAdresse);
+	int serverSocket2;
+
+    while ((clientSocket = accept(clients, (struct sockaddr *) &clientAdresse, &addrLen)) != -1) {
+        char ip[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, INET_ADDRSTRLEN);
+		printf("Connexion de %s:%i\n", ip, clientAdresse.sin_port);
+		//fcntl(clients, F_SETFL, O_NONBLOCK);
+		int len = read(clientSocket, buffer_fichier, sizeof(buffer_fichier));
+
+		
+
+		serverSocket2 = initSocket_client(&adresse2, port);
+		//Connexion au serveur intermédiaire
+		int status;
+		if ((status
+				= connect(serverSocket2, (struct sockaddr*)&adresse2,
+						sizeof(adresse2)))< 0) {
+				printf("\nConnection Failed \n");
+		}
+
+		inet_ntop(AF_INET, &(adresse2.sin_addr), ip, INET_ADDRSTRLEN);
+		//Envoie du chemin au serveur intermédiaire
 
 
-    if ((clientSocket = accept(clients, (struct sockaddr *) &clientAdresse, &addrLen)) != -1) {
-        // Convertion de l'IP en texte
+		send(serverSocket2, buffer_fichier, sizeof(buffer_fichier), 0);
+		int valread;
+		bzero(buffer, sizeof(*buffer));
+
+		struct Buff_vir* buffer_virtuel = malloc(sizeof(struct Buff_vir));
+		bzero(buffer_virtuel, sizeof(struct Buff_vir));
+		//Lecture du fichier
+		valread = read(serverSocket2, buffer_virtuel, sizeof(struct Buff_vir));
+		//printf("Valeur dans le buffer: %s\n", buffer);
+
+		close(serverSocket2);
+
+		printf("Valeur de l'id: %lu\n", buffer_virtuel->id);
+		printf("Valeur de l'ip: %s\n", buffer_virtuel->ip);
+		printf("Valeur de la longueur: %d\n", buffer_virtuel->lentgh);
+		printf("Valeur de l'offset: %d\n", buffer_virtuel->offset);
+
+		//Envoie de la réponse du server base de donnée au client
+		send(clientSocket, buffer_virtuel, sizeof(struct Buff_vir), 0);
+		close(clientSocket);
+	}
         
-    }    
-	char ip[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, INET_ADDRSTRLEN);
-	printf("Connexion de %s:%i\n", ip, clientAdresse.sin_port);
-	//fcntl(clients, F_SETFL, O_NONBLOCK);
-	int len = read(clientSocket, buffer_fichier, sizeof(buffer_fichier));
-
-    //Connexion au serveur intermédiaire
-    int status;
-    if ((status
-            = connect(serverSocket2, (struct sockaddr*)&adresse2,
-                    sizeof(adresse2)))< 0) {
-            printf("\nConnection Failed \n");
     }
-
-    inet_ntop(AF_INET, &(adresse2.sin_addr), ip, INET_ADDRSTRLEN);
-    //Envoie du chemin au serveur intermédiaire
-
-
-    send(serverSocket2, buffer_fichier, sizeof(buffer_fichier), 0);
-    int valread;
-    bzero(buffer, sizeof(*buffer));
-
-	struct Buff_vir* buffer_virtuel = malloc(sizeof(struct Buff_vir));
-    bzero(buffer_virtuel, sizeof(struct Buff_vir));
-    //Lecture du fichier
-    valread = read(serverSocket2, buffer_virtuel, sizeof(struct Buff_vir));
-    //printf("Valeur dans le buffer: %s\n", buffer);
-
-    printf("Valeur de l'id: %lu\n", buffer_virtuel->id);
-    printf("Valeur de l'ip: %s\n", buffer_virtuel->ip);
-    printf("Valeur de la longueur: %d\n", buffer_virtuel->lentgh);
-    printf("Valeur de l'offset: %d\n", buffer_virtuel->offset);
-
-    //Envoie de la réponse du server base de donnée au client
-    send(clientSocket, buffer_virtuel, sizeof(struct Buff_vir), 0);
-}
+	

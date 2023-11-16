@@ -136,6 +136,7 @@ void *envoie(void *arguments){
 		sum += buffer_virtuel->lentgh;
 		buffer_virtuel->id = sum;
 		printf("Buffer share: %s\n", args->buffer_share );
+		close(socket);
     }
 
 	return EXIT_SUCCESS;
@@ -213,7 +214,7 @@ int RequestFE(int clients, char* buffer_share) {
 
 
 	send(clientSocket, fichier, strlen(fichier),0);
-
+	close(clientSocket);
 	return clientSocket;
 }
 
@@ -242,10 +243,9 @@ int manageClient(int clients, char* buffer_share, struct Buff_vir *buff_vir) {
 	printf("Valeur dans le buffer: %s\n", buffer);
 
 	// Passage en mode non bloquant
-	fcntl(clientSocket, F_SETFL, O_NONBLOCK);
+	//fcntl(clientSocket, F_SETFL, O_NONBLOCK);
 
 	ouverture_et_lecture_fichier(buffer, clientSocket, buffer_share, buff_vir);
-	
 	return clientSocket;
 }
 
