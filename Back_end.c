@@ -131,8 +131,13 @@ void *envoie(void *arguments){
     	printf("Valeur de l'ip: %s\n", buffer_virtuel->ip);
     	printf("Valeur de la longueur: %d\n", buffer_virtuel->lentgh);
    		printf("Valeur de l'offset: %d\n", buffer_virtuel->offset);
-		send(socket, buffer_virtuel, sizeof(struct Buff_vir),0);
-		
+		int retour = send(socket, buffer_virtuel, sizeof(struct Buff_vir),0);
+		if (retour < sizeof(struct Buff_vir)){
+			printf("Pas envoyé\n");
+			getchar();
+		}
+
+	
 		sum += buffer_virtuel->lentgh;
 		buffer_virtuel->id = sum;
 		printf("Buffer share: %s\n", args->buffer_share );
