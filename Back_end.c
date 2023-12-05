@@ -212,7 +212,7 @@ int RequestFE(int clients, char* buffer_share) {
 	char* fichier = malloc(request->lentgh*sizeof(char));
 	bzero(fichier, request->lentgh*sizeof(char));
 
-	strcpy(fichier, buffer_share + request->id);	
+	strcpy(fichier, buffer_share + request->id);
 
 	printf("Le fichier vaut: %s\n", fichier);
 
@@ -251,6 +251,7 @@ int manageClient(int clients, char* buffer_share, struct Buff_vir *buff_vir) {
 	//fcntl(clientSocket, F_SETFL, O_NONBLOCK);
 
 	ouverture_et_lecture_fichier(buffer, clientSocket, buffer_share, buff_vir);
+	//write(socket, buffer, sizeof(*buffer));
 	return clientSocket;
 }
 
@@ -276,7 +277,7 @@ void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket, char*
 		//send(clientSocket, envoie, strlen(envoie), MSG_DONTWAIT);
     }
 	buff_vir->lentgh = strlen(envoie);
-	strcpy(buffer_share,envoie);
+	strcpy(buffer_share,envoie);  // a changer
 	
 	//return envoie;
 }

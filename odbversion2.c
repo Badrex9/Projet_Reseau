@@ -35,6 +35,7 @@ enm Etat socket_ETat =  none;
 char buffer_share[BUFFER_SHARE_LEN];
 bzero(buffer_share, BUFFER_SHARE_LEN*sizeof(char));
 long identifiant = 0;
+
 char type_preload(const void *buffer){
     size_t taille =4096;
     if(sizeof(*buffer)< taille){
@@ -45,9 +46,7 @@ char type_preload(const void *buffer){
         socket_ETat=virtuelle;
         return 'V';
     }
-
 }
-
 
  ssize_t write(int fd, const void *buf, size_t count){
     original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
