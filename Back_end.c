@@ -136,8 +136,6 @@ void *envoie(void *arguments){
 			printf("Pas envoyé\n");
 			getchar();
 		}
-
-	
 		sum += buffer_virtuel->lentgh;
 		buffer_virtuel->id = sum;
 		printf("Buffer share: %s\n", args->buffer_share );
