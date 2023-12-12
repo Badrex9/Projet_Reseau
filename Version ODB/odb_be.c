@@ -8,19 +8,18 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <stdbool.h>
+
 #define BUFFER_LEN 200
 #define BUFFER_SHARE_LEN 2000
 #define PORT 5000
+#define IP INADDR_ANY
+#define BACKLOG 3
+#define TAB_MAX_LENGHT 100
+
 
 struct arg_struct {
-    char* arg1;
-}
-
-enum Etat {
-    reel,
-    virtuelle,
-    request,
-    none
+    int arg1;
 };
 
 struct Buff_vir
@@ -28,7 +27,7 @@ struct Buff_vir
     char type;
     size_t size;
 	char ip[15];
-    int port
+    int port;
 	long id;
 	int offset;
 	int lentgh;
@@ -45,13 +44,12 @@ struct request{
 	int lentgh;
 };
 
-enm Etat socket_ETat =  none;
 char buffer_share[BUFFER_SHARE_LEN]; //mmap
-bool isInitialise = False;
+bool isInitialise = false;
 original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
 original_read_t original_read = (original_read_t)dlsym(RTLD_NEXT, "read");
 original_connect_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
-original_accecpt_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
+original_accecpt_t original_accept = (original_connect_t)dlsym(RTLD_NEXT, "accept");
 pthread_t a;
 
 long identifiant = 0;
@@ -61,110 +59,61 @@ int left_tab[TAB_MAX_LENGHT];
 int indice_right;
 int indice_left;
 
+// Initialisation de la structure sockaddr_in
+void initAdresse(struct sockaddr_in * adresse, int port) {
+	(*adresse).sin_family = AF_INET;
+	(*adresse).sin_addr.s_addr = IP;
+	(*adresse).sin_port = htons( port);
+}
+
+// Démarrage de la socket serveur
+int initSocket(struct sockaddr_in * adresse){
+	// Descripteur de socket
+	int fdsocket;
+
+	// Création de la socket en TCP
+	if ((fdsocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+		printf("Echéc de la création: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	printf("Création de la socket\n");
+
+	// Attachement de la socket sur le port et l'adresse IP
+	if (bind(fdsocket, (struct sockaddr *) adresse, sizeof(*adresse)) != 0) {
+		printf("Echéc d'attachement: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	//printf("Attachement de la socket sur le port %s\n", port);
+
+	// Passage en écoute de la socket
+	if (listen(fdsocket, BACKLOG) != 0) {
+		printf("Echéc de la mise en écoute: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	printf("Fin de l'initialisation\n");
+
+    return fdsocket;
+}
 
 char type_preload(const void *buffer){
     size_t taille =4096;
     if(sizeof(*buffer)< taille){
-        socket_ETat = reel ;
        return 'R';
     }
     else {
-        socket_ETat=virtuelle;
         return 'V';
     }
 }
-
-void all_initialisation(){
-    if (!isInitialise){ 
-        bzero(buffer_share, BUFFER_SHARE_LEN*sizeof(char));
-        isInitialise = True;
-
-        //initialisation des tableaux
-        bzero(right_tab[TAB_MAX_LENGHT], TAB_MAX_LENGHT*size(int));
-        bzero(left_tab[TAB_MAX_LENGHT], TAB_MAX_LENGHT*size(int));
-        indice_right = 0;
-        indice_left = 0;
-
-        //Créé le thread et initialise la socket si la variable PORT est renseignée lors de la compilation
-        #ifdef PORT
-        struct arg_struct *args = malloc(sizeof(struct arg_struct));
-        args -> arg1 = PORT; 
-        pthread_create(&a, NULL, traitement, (void *)args);
-        #endif 
-    };
-}
-
-int connect(int sockfd, const struct sockadd *serv_addr, socklen_t addrlen){
-    all_initialisation();
-    int result;
-    if (result = original_connect(sockfd, serv_addr, addrlen) >= 0){
-        right_tab[indice_right] = sockfd;
-        indice_right++;
-    }
-    return result;
-}   
-
-
-int accept(int sockfd, const struct sockadd *adresse, socklen_t* longueur){
-    all_initialisation();
-    int result;
-    if (result = original_accept(sockfd, adresse, longueur) != -1){
-        left_tab[indice_left] = sockfd;
-        indice_left++;
-    }
-    return result;
-}
-
-ssize_t write(int fd, const void *buf, size_t count){
-
-    all_initialisation();
-
-    if(type_preload(buf)=='R'){
-        char* buffer = malloc(sizeof(struct Buff_reel));
-        buffer->type ='R';
-        buffer->size = count ;
-        buffer->preload= *buff;
-        return original_write(fd,buffer, sizeof(struct Buff_reel));
-    }
-    elif(type_preload(buf)=='v'){
-        //on écrit la valeur dans buffer share
-        strcpy(buffer_share + identifiant,buf);
-
-
-        char* buffer = malloc(sizeof(struct  Buff_vir));
-        buffer->type ='v'
-        buffer->size = count ;
-
-        struct sockaddr_in clientAdresse;
-        unsigned int addrLen = sizeof(clientAdresse);
-
-        if (getpeername(fd, (struct sockaddr *) &clientAdresse, &addrLen) == -1) {
-            perror("Erreur lors de l'extraction de l'adresse et du port");
-            exit(1);
-        }
-        char ip[15];
-        inet_ntop(AF_INET, &(addr.sin_addr), ip, 15);
-        int port = ntohs(addr.sin_port);
-	    //Initialisation de l'offset du buffer_share
-	    buffer->offset = 0; 
-        buffer->ip =ip ;
-        buffer->port = port ;
-        buffer->id = identifiant ;   
-        identifiant =+ buffer->lentgh ;
-        return original_write(fd,buffer,sizeof(struct Buff_vir));
-    }
-}   
-
-
 
 void *traitement(void *arguments){
 
 	struct arg_struct *args = (struct arg_struct*)arguments;
 
 	struct sockaddr_in adresse;
-	initAdresse(&adresse, args->arg1, args->arg1);
+	initAdresse(&adresse, args->arg1);
 	
-	int serverSocket = initSocket(&adresse, args->arg1);
+	int serverSocket = initSocket(&adresse);
 	
 	while(1){
 
@@ -203,40 +152,88 @@ void *traitement(void *arguments){
 	}
 }
 
-// Démarrage de la socket serveur
-int initSocket(struct sockaddr_in * adresse){
-	// Descripteur de socket
-	int fdsocket;
 
-	// Création de la socket en TCP
-	if ((fdsocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-		printf("Echéc de la création: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	printf("Création de la socket\n");
 
-	// Attachement de la socket sur le port et l'adresse IP
-	if (bind(fdsocket, (struct sockaddr *) adresse, sizeof(*adresse)) != 0) {
-		printf("Echéc d'attachement: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	printf("Attachement de la socket sur le port %s\n", port);
+void all_initialisation(){
+    if (!isInitialise){ 
+        bzero(buffer_share, BUFFER_SHARE_LEN*sizeof(char));
+        isInitialise = true;
 
-	// Passage en écoute de la socket
-	if (listen(fdsocket, BACKLOG) != 0) {
-		printf("Echéc de la mise en écoute: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
+        //initialisation des tableaux
+        bzero(right_tab, TAB_MAX_LENGHT*sizeof(int));
+        bzero(left_tab, TAB_MAX_LENGHT*sizeof(int));
+        indice_right = 0;
+        indice_left = 0;
 
-	printf("Fin de l'initialisation\n");
-
-    return fdsocket;
+        //Créé le thread et initialise la socket si la variable PORT est renseignée lors de la compilation
+        #ifdef PORT
+        struct arg_struct *args = malloc(sizeof(struct arg_struct));
+        args -> arg1 = PORT;
+        pthread_create(&a, NULL, traitement, (void *)args);
+        #endif 
+    };
 }
 
-// Initialisation de la structure sockaddr_in
-void initAdresse(struct sockaddr_in * adresse, char* port, char* ip) {
-	(*adresse).sin_family = AF_INET;
-	(*adresse).sin_addr.s_addr = IP;
-	(*adresse).sin_port = htons( atoi(port));
+int connect(int sockfd, const struct sockaddr_in *serv_addr, socklen_t addrlen){
+    all_initialisation();
+    int result;
+    if (result = original_connect(sockfd, serv_addr, addrlen) >= 0){
+        right_tab[indice_right] = sockfd;
+        indice_right++;
+    }
+    return result;
+}   
+
+
+int accept(int sockfd, const struct sockadd *adresse, socklen_t* longueur){
+    all_initialisation();
+    int result;
+    if (result = original_accept(sockfd, adresse, longueur) != -1){
+        left_tab[indice_left] = sockfd;
+        indice_left++;
+    }
+    return result;
 }
+
+ssize_t write(int fd, const void *buf, size_t count){
+
+    all_initialisation();
+
+    if(type_preload(buf)=='R'){
+        struct Buff_reel* buffer = malloc(sizeof(struct Buff_reel));
+        buffer->type ='R';
+        buffer->size = count ;
+        buffer->preload= (char*)(buf);
+        return original_write(fd,buffer, sizeof(struct Buff_reel));
+    }
+    else if(type_preload(buf)=='V'){
+        //on écrit la valeur dans buffer share
+        strcpy(buffer_share + identifiant,buf);
+
+        struct Buff_vir* buffer = malloc(sizeof(struct  Buff_vir));
+        buffer->type ='v';
+        buffer->size = count ;
+
+        struct sockaddr_in clientAdresse;
+        unsigned int addrLen = sizeof(clientAdresse);
+
+        if (getpeername(fd, (struct sockaddr *) &clientAdresse, &addrLen) == -1) {
+            perror("Erreur lors de l'extraction de l'adresse et du port");
+            exit(1);
+        }
+        char ip[15];
+        inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, 15);
+        int port = ntohs(clientAdresse.sin_port);
+	    //Initialisation de l'offset du buffer_share
+	    buffer->offset = 0; 
+        buffer->ip =ip ;
+        buffer->port = port ;
+        buffer->id = identifiant ;   
+        identifiant =+ buffer->lentgh ;
+        return original_write(fd,buffer,sizeof(struct Buff_vir));
+    }
+}   
+
+
+
 

@@ -27,8 +27,8 @@
 
 void initAdresse(struct sockaddr_in * adresse, char* port);
 int initSocket(struct sockaddr_in * adresse, char* port);
-int manageClient(int clients, char* buffer, struct Buff_vir *buff_vir);
-void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket, char* buffer_share, struct Buff_vir *buff_vir);
+void manageClient(int clients);
+char* ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket);
 
 
 
