@@ -56,6 +56,12 @@ pthread_t a;
 
 long identifiant = 0;
 
+int right_tab[TAB_MAX_LENGHT];
+int left_tab[TAB_MAX_LENGHT];
+int indice_right;
+int indice_left;
+
+
 char type_preload(const void *buffer){
     size_t taille =4096;
     if(sizeof(*buffer)< taille){
@@ -73,13 +79,40 @@ void all_initialisation(){
         bzero(buffer_share, BUFFER_SHARE_LEN*sizeof(char));
         isInitialise = True;
 
+        //initialisation des tableaux
+        bzero(right_tab[TAB_MAX_LENGHT], TAB_MAX_LENGHT*size(int));
+        bzero(left_tab[TAB_MAX_LENGHT], TAB_MAX_LENGHT*size(int));
+        indice_right = 0;
+        indice_left = 0;
 
+        //Créé le thread et initialise la socket si la variable PORT est renseignée lors de la compilation
+        #ifdef PORT
         struct arg_struct *args = malloc(sizeof(struct arg_struct));
-        args -> arg1 = PORT; //Initialisé le 2nd paramètre du démarrage backend. 
-
+        args -> arg1 = PORT; 
         pthread_create(&a, NULL, traitement, (void *)args);
-        //pthread_join(a, NULL);
+        #endif 
     };
+}
+
+int connect(int sockfd, const struct sockadd *serv_addr, socklen_t addrlen){
+    all_initialisation();
+    int result;
+    if (result = original_connect(sockfd, serv_addr, addrlen) >= 0){
+        right_tab[indice_right] = sockfd;
+        indice_right++;
+    }
+    return result;
+}   
+
+
+int accept(int sockfd, const struct sockadd *adresse, socklen_t* longueur){
+    all_initialisation();
+    int result;
+    if (result = original_accept(sockfd, adresse, longueur) != -1){
+        left_tab[indice_left] = sockfd;
+        indice_left++;
+    }
+    return result;
 }
 
 ssize_t write(int fd, const void *buf, size_t count){
@@ -171,7 +204,7 @@ void *traitement(void *arguments){
 }
 
 // Démarrage de la socket serveur
-int initSocket(struct sockaddr_in * adresse, char* port){
+int initSocket(struct sockaddr_in * adresse){
 	// Descripteur de socket
 	int fdsocket;
 

@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #define BUFFER_LEN 200
 #define BUFFER_SHARE_LEN 2000
-
+#define TAB_MAX_LENGHT
 struct arg_struct {
     char* arg1;
 }
@@ -51,67 +51,114 @@ bool isInitialise = False;
 original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
 original_read_t original_read = (original_read_t)dlsym(RTLD_NEXT, "read");
 original_connect_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
-original_accecpt_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
+original_accecpt_t original_accept = (original_accept_t)dlsym(RTLD_NEXT, "accept");
 
 
-char type_preload(const void *buffer){
-    size_t taille =4096;
-    if(sizeof(*buffer)< taille){
-        socket_ETat = reel ;
-       return 'R';
+int right_tab[TAB_MAX_LENGHT];
+int left_tab[TAB_MAX_LENGHT];
+int indice_right;
+int indice_left;
+
+bool exist_tab(int tab[], int fdsocket){
+    int i;
+    for(i =0; i<TAB_MAX_LENGHT; i++){
+        if (tab[i]==fdsocket){
+            return true;
+        }
     }
-    else {
-        socket_ETat=virtuelle;
-        return 'V';
+    return false;
+}
+
+
+void all_initialisation(){
+    if (!isInitialise){ 
+        bzero(right_tab[TAB_MAX_LENGHT], TAB_MAX_LENGHT*size(int));
+        bzero(left_tab[TAB_MAX_LENGHT], TAB_MAX_LENGHT*size(int));
+        indice_right = 0;
+        indice_left = 0;
+        isInitialise = True;
     }
 }
 
+int connect(int sockfd, const struct sockadd *serv_addr, socklen_t addrlen){
+    all_initialisation();
+    int result;
+    if (result = original_connect(sockfd, serv_addr, addrlen) >= 0){
+        right_tab[indice_right] = sockfd;
+        indice_right++;
+    }
+    return result;
+}   
+
+
+int accept(int sockfd, const struct sockadd *adresse, socklen_t* longueur){
+    all_initialisation();
+    int result;
+    if (result = original_accept(sockfd, adresse, longueur) != -1){
+        left_tab[indice_left] = sockfd;
+        indice_left++;
+    }
+    return result;
+}
+
+
+
 ssize_t read(int fd, void *buf, size_t count){
 
-    isInitialise = True;
-
+    all_initialisation();    
     ssize_t result;
-    if(socket_ETat==reel){
-        char* buffer = malloc(sizeof(struct Buff_reel));
-        result= original_read(fd, buffer,count);
-        bzero(buf, sizeof(*buf));
-        strcpy(buf,buffer->preload);
-    }
-    else if(socket_ETat==virtuelle){
 
-        char* buffer = malloc(sizeof(struct  Buff_vir));
-        //result= original_read(fd, &buffer_share[buf->identifiant],count);
-        result= original_read(fd, buffer,sizeof(struct Buff_vir));
-        
-        struct sockaddr_in adresse;
-        initAdresse(&adresse, buffer->ip);
-        int serverSocket = initSocket_client(&adresse, buffer->ip);
+    if exist_tab(tab_right, fd){
+        char etat;
+        original_read(fd, etat,sizeof(char));
+        printf("état : %c", etat);
 
-        if ((status = original_connect(serverSocket, (struct sockaddr*)&adresse, sizeof(adresse)))< 0) {
-            printf("\nConnection Failed \n");
+        if(etat == 'R'){
+            char* buffer = malloc(sizeof(struct Buff_reel));
+            result= original_read(fd, buffer,count);
+            bzero(buf, sizeof(*buf));
+            strcpy(buf,buffer->preload);
+            return result;
         }
+        else if(etat = 'v'){
 
-        socket_ETat = request;
-        struct request* resquest = malloc(sizeof(struct request));
-        bzero(request, sizeof(struct request));
-        request->id = buffer->id;
-        request->lentgh = buffer->lentgh;
-        inet_ntop(AF_INET, &(adresse2.sin_addr), buffer->ip, INET_ADDRSTRLEN);
+            char* buffer = malloc(sizeof(struct  Buff_vir));
+            //result= original_read(fd, &buffer_share[buf->identifiant],count);
+            result= original_read(fd, buffer,sizeof(struct Buff_vir));
 
-        //Envoie du buffer virtuel directement au backend
-        original_write(serverSocket, request, sizeof(struct request), 0);
+            struct sockaddr_in adresse;
+            initAdresse(&adresse, buffer->ip);
+            int serverSocket = initSocket_client(&adresse, buffer->ip);
 
-        char* buffer_final = malloc(BUFFER_LEN);
-        //Retour du backend avec la page demandée
-        valread = original_read(serverSocket, buffer_final, request->lentgh);
-        printf("Le buffer vaut: %s\n", buf);
+            if ((status = original_connect(serverSocket, (struct sockaddr*)&adresse, sizeof(adresse)))< 0) {
+                printf("\nConnection Failed \n");
+            }
 
-        bzero(buf, sizeof(*buf));
-        strcpy(buf, buffer_final);
-        close(serverSocket);
+            socket_ETat = request;
+            struct request* resquest = malloc(sizeof(struct request));
+            bzero(request, sizeof(struct request));
+            request->id = buffer->id;
+            request->lentgh = buffer->lentgh;
+            inet_ntop(AF_INET, &(adresse2.sin_addr), buffer->ip, INET_ADDRSTRLEN);
 
+            //Envoie du buffer virtuel directement au backend
+            original_write(serverSocket, request, sizeof(struct request), 0);
+
+            char* buffer_final = malloc(BUFFER_LEN);
+            //Retour du backend avec la page demandée
+            valread = original_read(serverSocket, buffer_final, request->lentgh);
+            printf("Le buffer vaut: %s\n", buf);
+
+            bzero(buf, sizeof(*buf));
+            strcpy(buf, buffer_final);
+            close(serverSocket);
+            return result;
+        }
     }
-    socket_ETat=none ;
-    return result ;
+
+    else {      //if (exist_tab(tab_right, fd))
+        return original_read(fd, buf, count);
+    }
+
 }
 
