@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #define BUFFER_LEN 200
 #define BUFFER_SHARE_LEN 2000
+#define PORT 5000
 
 struct arg_struct {
     char* arg1;
@@ -74,10 +75,10 @@ void all_initialisation(){
 
 
         struct arg_struct *args = malloc(sizeof(struct arg_struct));
-        args -> arg1; //Initialisé le 2nd paramètre du démarrage backend. 
+        args -> arg1 = PORT; //Initialisé le 2nd paramètre du démarrage backend. 
 
         pthread_create(&a, NULL, traitement, (void *)args);
-        pthread_join(a, NULL);
+        //pthread_join(a, NULL);
     };
 }
 
@@ -148,13 +149,12 @@ void *traitement(void *arguments){
         } 
         char ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, INET_ADDRSTRLEN);
-        printf("Connexion thread 2 de sur la machine%s:%i\n", ip, clientAdresse.sin_port);
+        printf("Connexion du thread 2 de sur la machine%s:%i\n", ip, clientAdresse.sin_port);
         //fcntl(clients, F_SETFL, O_NONBLOCK);
         int len = original_read(clientSocket, request, sizeof(struct request));
 
         printf("Valeur de l'id: %lu\n", request->id);
         printf("Valeur de la longueur: %d\n", request->lentgh);
-
 
         // Passage en mode non bloquant
         fcntl(clientSocket, F_SETFL, O_NONBLOCK);

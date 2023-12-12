@@ -25,7 +25,7 @@
 //Longueur des lignes dans le fichier
 #define LENGTH_RAW 1024
 
-void initAdresse(struct sockaddr_in * adresse, char* port, char* ip);
+void initAdresse(struct sockaddr_in * adresse, char* port);
 int initSocket(struct sockaddr_in * adresse, char* port);
 int manageClient(int clients, char* buffer, struct Buff_vir *buff_vir);
 void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket, char* buffer_share, struct Buff_vir *buff_vir);
@@ -35,7 +35,7 @@ void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket, char*
 int main(int argc, char* argv[]) {
 
 	struct sockaddr_in adresse;
-	initAdresse(&adresse, argv[1], argv[2]);
+	initAdresse(&adresse, argv[1]);
 	int serverSocket = initSocket(&adresse, argv[1]);
 	while(1){
         manageClient(serverSocket);
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 	return EXIT_SUCCESS;
 }
 // Initialisation de la structure sockaddr_in
-void initAdresse(struct sockaddr_in * adresse, char* port, char* ip) {
+void initAdresse(struct sockaddr_in * adresse, char* port) {
 	(*adresse).sin_family = AF_INET;
 	(*adresse).sin_addr.s_addr = IP;
 	(*adresse).sin_port = htons( atoi(port));

@@ -97,9 +97,12 @@ ssize_t read(int fd, void *buf, size_t count){
         request->id = buffer->id;
         request->lentgh = buffer->lentgh;
         inet_ntop(AF_INET, &(adresse2.sin_addr), buffer->ip, INET_ADDRSTRLEN);
+
+        //Envoie du buffer virtuel directement au backend
         original_write(serverSocket, request, sizeof(struct request), 0);
 
         char* buffer_final = malloc(BUFFER_LEN);
+        //Retour du backend avec la page demandée
         valread = original_read(serverSocket, buffer_final, request->lentgh);
         printf("Le buffer vaut: %s\n", buf);
 
