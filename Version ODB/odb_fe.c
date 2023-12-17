@@ -1,15 +1,15 @@
 #define GNU_SOURCE
 #include <unistd.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <sys/socket.h>
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <errno.h>
 #include <arpa/inet.h>
 #include <dlfcn.h>
-#include <fcntl.h>
+#include <sys/socket.h>
+#include <stdio.h>
+
 #define BUFFER_LEN 200
 #define BUFFER_SHARE_LEN 2000
 #define TAB_MAX_LENGHT 20000
@@ -42,10 +42,12 @@ struct request{
 
 
 bool isInitialise = false;
+
 original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
 original_read_t original_read = (original_read_t)dlsym(RTLD_NEXT, "read");
 original_connect_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
-original_accecpt_t original_accept = (original_accept_t)dlsym(RTLD_NEXT, "accept");
+original_accept_t original_accept = (original_accept_t)dlsym(RTLD_NEXT, "accept");
+
 
 
 int right_tab[TAB_MAX_LENGHT];
@@ -75,6 +77,15 @@ bool exist_tab(int tab[], int fdsocket){
     return false;
 }
 
+int accept(int sockfd, const struct sockadd *adresse, socklen_t* longueur){
+    all_initialisation();
+    int result;
+    if (result = original_accept(sockfd, adresse, longueur) != -1){
+        left_tab[indice_left] = sockfd;
+        indice_left++;
+    }
+    return result;
+}
 
 int connect(int sockfd, const struct sockadd *serv_addr, socklen_t addrlen){
     all_initialisation();
@@ -87,15 +98,6 @@ int connect(int sockfd, const struct sockadd *serv_addr, socklen_t addrlen){
 }   
 
 
-int accept(int sockfd, const struct sockadd *adresse, socklen_t* longueur){
-    all_initialisation();
-    int result;
-    if (result = original_accept(sockfd, adresse, longueur) != -1){
-        left_tab[indice_left] = sockfd;
-        indice_left++;
-    }
-    return result;
-}
 
 
 
@@ -116,7 +118,7 @@ ssize_t read(int fd, void *buf, size_t count){
             strcpy(buf,buffer->preload);
             return result;
         }
-        else if(etat = 'v'){
+        else if(etat = 'V'){
 
             struct  Buff_vir* buffer = malloc(sizeof(struct  Buff_vir));
             //result= original_read(fd, &buffer_share[buf->identifiant],count);
@@ -135,7 +137,7 @@ ssize_t read(int fd, void *buf, size_t count){
             bzero(request, sizeof(struct request));
             request->id = buffer->id;
             request->lentgh = buffer->lentgh;
-            inet_ntop(AF_INET, &(adresse2.sin_addr), buffer->ip, INET_ADDRSTRLEN);
+            inet_ntop(AF_INET, &(adresse.sin_addr), buffer->ip, INET_ADDRSTRLEN);
 
             //Envoie du buffer virtuel directement au backend
             original_write(serverSocket, request, sizeof(struct request), 0);
