@@ -1,5 +1,6 @@
 #define GNU_SOURCE
 #include <unistd.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <stdlib.h>
@@ -7,19 +8,13 @@
 #include <string.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <dlfcn.h>
 #include <fcntl.h>
 #define BUFFER_LEN 200
 #define BUFFER_SHARE_LEN 2000
-#define TAB_MAX_LENGHT
+#define TAB_MAX_LENGHT 20000
 struct arg_struct {
     char* arg1;
-}
-
-enum Etat {
-    reel,
-    virtuelle,
-    request,
-    none
 };
 
 struct Buff_vir
@@ -27,7 +22,7 @@ struct Buff_vir
     char type;
     size_t size;
 	char ip[15];
-    int port
+    int port;
 	long id;
 	int offset;
 	int lentgh;
@@ -44,10 +39,9 @@ struct request{
 	int lentgh;
 };
 
-enm Etat socket_ETat =  none;
 
 
-bool isInitialise = False;
+bool isInitialise = false;
 original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
 original_read_t original_read = (original_read_t)dlsym(RTLD_NEXT, "read");
 original_connect_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
@@ -59,6 +53,18 @@ int left_tab[TAB_MAX_LENGHT];
 int indice_right;
 int indice_left;
 
+
+
+void all_initialisation(){
+    if (!isInitialise){ 
+        bzero(right_tab, TAB_MAX_LENGHT*sizeof(int));
+        bzero(left_tab, TAB_MAX_LENGHT*sizeof(int));
+        indice_right = 0;
+        indice_left = 0;
+        isInitialise = true;
+    }
+}
+
 bool exist_tab(int tab[], int fdsocket){
     int i;
     for(i =0; i<TAB_MAX_LENGHT; i++){
@@ -69,16 +75,6 @@ bool exist_tab(int tab[], int fdsocket){
     return false;
 }
 
-
-void all_initialisation(){
-    if (!isInitialise){ 
-        bzero(right_tab[TAB_MAX_LENGHT], TAB_MAX_LENGHT*size(int));
-        bzero(left_tab[TAB_MAX_LENGHT], TAB_MAX_LENGHT*size(int));
-        indice_right = 0;
-        indice_left = 0;
-        isInitialise = True;
-    }
-}
 
 int connect(int sockfd, const struct sockadd *serv_addr, socklen_t addrlen){
     all_initialisation();
@@ -108,13 +104,13 @@ ssize_t read(int fd, void *buf, size_t count){
     all_initialisation();    
     ssize_t result;
 
-    if exist_tab(tab_right, fd){
+    if(exist_tab(right_tab, fd)){
         char etat;
         original_read(fd, etat,sizeof(char));
         printf("état : %c", etat);
 
         if(etat == 'R'){
-            char* buffer = malloc(sizeof(struct Buff_reel));
+            struct Buff_reel* buffer = malloc(sizeof(struct Buff_reel));
             result= original_read(fd, buffer,count);
             bzero(buf, sizeof(*buf));
             strcpy(buf,buffer->preload);
@@ -122,7 +118,7 @@ ssize_t read(int fd, void *buf, size_t count){
         }
         else if(etat = 'v'){
 
-            char* buffer = malloc(sizeof(struct  Buff_vir));
+            struct  Buff_vir* buffer = malloc(sizeof(struct  Buff_vir));
             //result= original_read(fd, &buffer_share[buf->identifiant],count);
             result= original_read(fd, buffer,sizeof(struct Buff_vir));
 
@@ -134,7 +130,7 @@ ssize_t read(int fd, void *buf, size_t count){
                 printf("\nConnection Failed \n");
             }
 
-            socket_ETat = request;
+            
             struct request* resquest = malloc(sizeof(struct request));
             bzero(request, sizeof(struct request));
             request->id = buffer->id;
@@ -156,7 +152,7 @@ ssize_t read(int fd, void *buf, size_t count){
         }
     }
 
-    else {      //if (exist_tab(tab_right, fd))
+    else {      
         return original_read(fd, buf, count);
     }
 
