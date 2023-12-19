@@ -53,12 +53,12 @@ int right_tab[TAB_MAX_LENGHT];
 int left_tab[TAB_MAX_LENGHT];
 int indice_right;
 int indice_left;
-typedef ssize_t (*original_read_t)(int fd, void *buf, size_t count);
-typedef int (*original_accept_t)(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-typedef int (*original_connect_t)(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+typedef ssize_t (*original_read_t)(int , void *, size_t );
+typedef int (*original_accept_t)(int, struct sockaddr *, socklen_t *);
+typedef int (*original_connect_t)(int , const struct sockaddr *, socklen_t );
 
 
-
+gcc -shared -o odb.so -fPIC odb_fe.c -ldl
 
 
 
