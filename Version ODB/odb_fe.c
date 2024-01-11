@@ -1,4 +1,5 @@
-#define GNU_SOURCE
+#define _GNU_SOURCE
+#include <dlfcn.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -6,7 +7,6 @@
 #include <string.h>
 #include <errno.h>
 #include <arpa/inet.h>
-#include <dlfcn.h>
 #include <sys/socket.h>
 #include <stdio.h>
 
@@ -54,12 +54,11 @@ int left_tab[TAB_MAX_LENGHT];
 int indice_right;
 int indice_left;
 typedef ssize_t (*original_read_t)(int , void *, size_t );
-typedef int (*original_accept_t)(int, struct sockaddr *, socklen_t *);
+typedef ssize_t (*original_write_t)(int , void *, size_t );
+typedef int (*original_accept_t)(int,struct sockaddr *, socklen_t* );
 typedef int (*original_connect_t)(int , const struct sockaddr *, socklen_t );
 
-
-gcc -shared -o odb.so -fPIC odb_fe.c -ldl
-
+//gcc -shared -o odb.so -fPIC odb_fe.c -ldl
 
 
 void all_initialisation(){
@@ -114,19 +113,7 @@ int initSocket(struct sockaddr_in * adresse){
 
     return fdsocket;
 }
-
-int accept(int sockfd, const struct sockadd *adresse, socklen_t* longueur){
-    original_accept_t original_accept = (original_accept_t)dlsym(RTLD_NEXT, "accept");
-    all_initialisation();
-    int result;
-    if (result = original_accept(sockfd, adresse, longueur) != -1){
-        left_tab[indice_left] = sockfd;
-        indice_left++;
-    }
-    return result;
-}
-
-int connect(int sockfd, const struct sockadd *serv_addr, socklen_t addrlen){
+int connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen){
     original_connect_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
     all_initialisation();
     int result;
@@ -136,19 +123,33 @@ int connect(int sockfd, const struct sockadd *serv_addr, socklen_t addrlen){
     }
     return result;
 }   
+int accept(int sockfd,  struct sockaddr *adresse, socklen_t * longueur){
+    original_accept_t original_accept = (original_accept_t)dlsym(RTLD_NEXT, "accept");
+
+    all_initialisation();
+    int result;
+    if (result = original_accept(sockfd, adresse, longueur) != -1){
+        left_tab[indice_left] = sockfd;
+        indice_left++;
+    }
+    return result;
+}
 
 
 
 
 
 ssize_t read(int fd, void *buf, size_t count){
+    
     original_read_t original_read = (original_read_t)dlsym(RTLD_NEXT, "read");
+    original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
+    original_connect_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
     all_initialisation();    
     ssize_t result;
 
     if(exist_tab(right_tab, fd)){
         char etat;
-        original_read(fd, etat,sizeof(char));
+        original_read(fd, &etat,sizeof(char));
         printf("état : %c", etat);
 
         if(etat == 'R'){
@@ -167,7 +168,7 @@ ssize_t read(int fd, void *buf, size_t count){
             struct sockaddr_in adresse;
             initAdresse(&adresse, buffer->ip,buffer->port);
             int serverSocket = initSocket(&adresse);
-
+              int status;
             if ((status = original_connect(serverSocket, (struct sockaddr*)&adresse, sizeof(adresse)))< 0) {
                 printf("\nConnection Failed \n");
             }
@@ -180,12 +181,12 @@ ssize_t read(int fd, void *buf, size_t count){
             inet_ntop(AF_INET, &(adresse.sin_addr), buffer->ip, INET_ADDRSTRLEN);
 
             //Envoie du buffer virtuel directement au backend
-            original_write(serverSocket, request, sizeof(struct request), 0);
+            original_write(serverSocket, request, sizeof(struct request));
 
             char* buffer_final = malloc(BUFFER_LEN);
             //Retour du backend avec la page demandée
             original_read(serverSocket, buffer_final, request->lentgh);
-            printf("Le buffer vaut: %s\n", buf);
+            printf("Le buffer vaut: %p\n", buf);
 
             bzero(buf, sizeof(*buf));
             strcpy(buf, buffer_final);
