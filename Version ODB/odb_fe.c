@@ -58,8 +58,11 @@ typedef ssize_t (*original_write_t)(int , void *, size_t );
 typedef int (*original_accept_t)(int,struct sockaddr *, socklen_t* );
 typedef int (*original_connect_t)(int , const struct sockaddr *, socklen_t );
 
-//gcc -shared -o odb.so -fPIC odb_fe.c -ldl
 
+//Dans le répertoire Version ODB:
+//gcc -shared -o odb.so -fPIC odb_fe.c -ldl
+//gcc Front_end.c -o FE
+//LD_PRELOAD=./odb_fe.so ./FE port1 port2
 
 void all_initialisation(){
     if (!isInitialise){ 
@@ -109,7 +112,8 @@ int initSocket(struct sockaddr_in * adresse){
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Fin de l'initialisation\n");
+	printf("Fin de l'initialisation_6\n");
+    printf("On arrive à l'accept\n");
 
     return fdsocket;
 }
@@ -127,11 +131,15 @@ int accept(int sockfd,  struct sockaddr *adresse, socklen_t * longueur){
     original_accept_t original_accept = (original_accept_t)dlsym(RTLD_NEXT, "accept");
 
     all_initialisation();
-    int result;
-    if (result = original_accept(sockfd, adresse, longueur) != -1){
+
+    printf("FIn init\n");
+    int result = original_accept(sockfd, adresse, longueur);
+    if (result != -1){
         left_tab[indice_left] = sockfd;
         indice_left++;
+        printf("Fin accept\n");
     }
+    printf("Fin accept\n");
     return result;
 }
 
@@ -168,11 +176,11 @@ ssize_t read(int fd, void *buf, size_t count){
             struct sockaddr_in adresse;
             initAdresse(&adresse, buffer->ip,buffer->port);
             int serverSocket = initSocket(&adresse);
-              int status;
+           
+            int status;
             if ((status = original_connect(serverSocket, (struct sockaddr*)&adresse, sizeof(adresse)))< 0) {
                 printf("\nConnection Failed \n");
             }
-
             
             struct request* request = malloc(sizeof(struct request));
             bzero(request, sizeof(struct request));

@@ -1,4 +1,5 @@
-#define GNU_SOURCE
+#define _GNU_SOURCE 
+#include <dlfcn.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -9,6 +10,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 #define BUFFER_LEN 200
 #define BUFFER_SHARE_LEN 2000
@@ -17,7 +19,9 @@
 #define BACKLOG 3
 #define TAB_MAX_LENGHT 100
 
-
+//gcc -shared -o odb_be.so -lpthread -pthread -fPIC odb_be.c -ldl (compilation bibliothèque)
+//gcc Back_end.c -o BE
+//LD_PRELOAD=./odb_be.so ./BE 7000 6000
 struct arg_struct {
     int arg1;
 };
@@ -26,7 +30,7 @@ struct Buff_vir
 {
     char type;
     size_t size;
-	char ip[15];
+	char* ip;
     int port;
 	long id;
 	int offset;
@@ -36,7 +40,7 @@ struct Buff_reel
 {
     char type;
     size_t size;
-    char preload[BUFFER_LEN];
+    char* preload;
 };
 
 struct request{
@@ -46,10 +50,11 @@ struct request{
 
 char buffer_share[BUFFER_SHARE_LEN]; //mmap
 bool isInitialise = false;
-original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
-original_read_t original_read = (original_read_t)dlsym(RTLD_NEXT, "read");
-original_connect_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
-original_accecpt_t original_accept = (original_connect_t)dlsym(RTLD_NEXT, "accept");
+typedef ssize_t (*original_read_t)(int , void *, size_t );
+typedef ssize_t (*original_write_t)(int , void *, size_t );
+typedef int (*original_accept_t)(int,struct sockaddr *, socklen_t* );
+typedef int (*original_connect_t)(int , const struct sockaddr *, socklen_t );
+
 pthread_t a;
 
 long identifiant = 0;
@@ -107,7 +112,10 @@ char type_preload(const void *buffer){
 }
 
 void *traitement(void *arguments){
-
+    original_accept_t original_accept = (original_accept_t)dlsym(RTLD_NEXT, "accept");
+    original_read_t original_read = (original_read_t)dlsym(RTLD_NEXT, "read");
+    original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
+    
 	struct arg_struct *args = (struct arg_struct*)arguments;
 
 	struct sockaddr_in adresse;
@@ -125,7 +133,7 @@ void *traitement(void *arguments){
         struct sockaddr_in clientAdresse;
         unsigned int addrLen = sizeof(clientAdresse);
         int clientSocket;
-
+        
         if ((clientSocket = original_accept(serverSocket, (struct sockaddr *) &clientAdresse, &addrLen)) != -1) {
             // Convertion de l'IP en texte
         } 
@@ -146,7 +154,7 @@ void *traitement(void *arguments){
         strcpy(fichier, buffer_share + request->id);
         printf("Le fichier vaut: %s\n", fichier);
 
-        original_write(clientSocket, fichier, strlen(fichier),0);
+        original_write(clientSocket, fichier, strlen(fichier));
         close(clientSocket);
     
 	}
@@ -174,7 +182,8 @@ void all_initialisation(){
     };
 }
 
-int connect(int sockfd, const struct sockaddr_in *serv_addr, socklen_t addrlen){
+int connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen){
+    original_connect_t original_connect = (original_connect_t)dlsym(RTLD_NEXT, "connect");
     all_initialisation();
     int result;
     if (result = original_connect(sockfd, serv_addr, addrlen) >= 0){
@@ -185,7 +194,8 @@ int connect(int sockfd, const struct sockaddr_in *serv_addr, socklen_t addrlen){
 }   
 
 
-int accept(int sockfd, const struct sockadd *adresse, socklen_t* longueur){
+int accept(int sockfd,  struct sockaddr *adresse, socklen_t * longueur){
+    original_accept_t original_accept = (original_accept_t)dlsym(RTLD_NEXT, "accept");
     all_initialisation();
     int result;
     if (result = original_accept(sockfd, adresse, longueur) != -1){
@@ -196,7 +206,7 @@ int accept(int sockfd, const struct sockadd *adresse, socklen_t* longueur){
 }
 
 ssize_t write(int fd, const void *buf, size_t count){
-
+    original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
     all_initialisation();
 
     if(type_preload(buf)=='R'){

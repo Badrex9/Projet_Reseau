@@ -76,7 +76,6 @@ int initSocket_client(struct sockaddr_in * adresse, char* port){
 	printf("Création de la socket\n");
 
 	printf("Fin de l'initialisation\n");
-
     return fdsocket;
 }
 
@@ -107,7 +106,6 @@ int initSocket_server(struct sockaddr_in * adresse, char* port){
 	}
 
 	printf("Fin de l'initialisation\n");
-
     return fdsocket;
 }
 
@@ -115,15 +113,15 @@ int initSocket_server(struct sockaddr_in * adresse, char* port){
 // On traite l'input des clients
 void manageClient(int clients, char* port2, struct sockaddr_in adresse2) {
     int longueur = 1024;
-
     // Descripteur de la socket du client
     char buffer[longueur];
     int clientSocket;
     // Structure contenant l'adresse du client
     struct sockaddr_in clientAdresse;
     unsigned int addrLen = sizeof(clientAdresse);
-    while ((clientSocket = accept(clients, (struct sockaddr *) &clientAdresse, &addrLen)) != -1){
 
+    while ((clientSocket = accept(clients, (struct sockaddr *) &clientAdresse, &addrLen)) != -1){
+        
         fcntl(clientSocket, F_SETFL, 0);
         char ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, INET_ADDRSTRLEN);
