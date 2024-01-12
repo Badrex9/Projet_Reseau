@@ -148,16 +148,22 @@ void manageClient(int clients, char* port2, struct sockaddr_in adresse2) {
         inet_ntop(AF_INET, &(adresse2.sin_addr), ip, INET_ADDRSTRLEN);
         //Envoie du chemin au serveur intermédiaire
 
+        printf("%s\n", path);
 
-        send(serverSocket2, path, longueur, 0);
+        int ret = write(serverSocket2, path, longueur);
         int valread;
 
+        if (ret<strlen(path))
+            printf("[Mayday] Not sent fully!\n");
+        else
+            printf("All gud bruh!\n");
+        
         //Lecture du fichier
         valread = read(serverSocket2, buffer, sizeof(*buffer));
 
         close(serverSocket2);
 
-        send(clientSocket,buffer, sizeof(*buffer), 0);
+        write(clientSocket,buffer, sizeof(*buffer));
         
         close(clientSocket);
     }
@@ -200,7 +206,7 @@ char* traitement_get(char buffer[BUFFER_LEN], int clientSocket){
     char* path = malloc(BUFFER_LEN*sizeof(char));
     
     bzero(path,BUFFER_LEN);
-    strcat(path, "/Users/zamaien/Documents/Projet Réseau/DB/");
+    strcat(path, "../DB/");
 
     //Traitement de la requete GET: extraction du nom du fichier à chercher + ajout du chemin correspondant
     file = traitement_get_str(buffer);

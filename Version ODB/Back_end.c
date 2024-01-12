@@ -28,7 +28,7 @@
 void initAdresse(struct sockaddr_in * adresse, char* port);
 int initSocket(struct sockaddr_in * adresse, char* port);
 void manageClient(int clients);
-char* ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket);
+void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int clientSocket);
 
 
 
@@ -105,7 +105,7 @@ void manageClient(int clients) {
 	close(clientSocket);
 }
 
-char* ouverture_et_lecture_fichier(char path[BUFFER_LEN], int socket){
+void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int socket){
 	FILE* fichier = NULL;
     char chaine[LENGTH_RAW] = "";
 	

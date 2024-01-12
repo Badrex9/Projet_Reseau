@@ -19,9 +19,9 @@
 #define BACKLOG 3
 #define TAB_MAX_LENGHT 100
 
-//gcc -shared -o odb_be.so -lpthread -pthread -fPIC odb_be.c -ldl (compilation bibliothèque)
+//gcc -shared -o odb_be.so -lpthread -pthread -fPIC odb_be.c -ldl -DPORT_BE=6000 (compilation bibliothèque)
 //gcc Back_end.c -o BE
-//LD_PRELOAD=./odb_be.so ./BE 7000 6000
+//LD_PRELOAD=./odb_be.so ./BE 7000 
 struct arg_struct {
     int arg1;
 };
@@ -116,10 +116,10 @@ void *traitement(void *arguments){
     original_read_t original_read = (original_read_t)dlsym(RTLD_NEXT, "read");
     original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
     
-	struct arg_struct *args = (struct arg_struct*)arguments;
+	//struct arg_struct *args = (struct arg_struct*)arguments;
 
 	struct sockaddr_in adresse;
-	initAdresse(&adresse, args->arg1);
+	initAdresse(&adresse, PORT_BE);
 	
 	int serverSocket = initSocket(&adresse);
 	
@@ -132,9 +132,9 @@ void *traitement(void *arguments){
         // Structure contenant l'adresse du client
         struct sockaddr_in clientAdresse;
         unsigned int addrLen = sizeof(clientAdresse);
-        int clientSocket;
+        int clientSocket = original_accept(serverSocket, (struct sockaddr *) &clientAdresse, &addrLen);
         
-        if ((clientSocket = original_accept(serverSocket, (struct sockaddr *) &clientAdresse, &addrLen)) != -1) {
+        if (clientSocket != -1) {
             // Convertion de l'IP en texte
         } 
         char ip[INET_ADDRSTRLEN];
@@ -172,13 +172,15 @@ void all_initialisation(){
         bzero(left_tab, TAB_MAX_LENGHT*sizeof(int));
         indice_right = 0;
         indice_left = 0;
-
+        
         //Créé le thread et initialise la socket si la variable PORT est renseignée lors de la compilation
-        #ifdef PORT
+        #ifndef PORT_BE
+        #define PORT_BE 4000
+        #endif
         struct arg_struct *args = malloc(sizeof(struct arg_struct));
-        args -> arg1 = PORT;
-        pthread_create(&a, NULL, traitement, (void *)args);
-        #endif 
+        //args -> arg1 = PORT_BE;
+        pthread_create(&a, NULL, traitement, NULL /*(void *)args*/);
+        pthread_detach(a);
     };
 }
 
@@ -197,8 +199,8 @@ int connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen){
 int accept(int sockfd,  struct sockaddr *adresse, socklen_t * longueur){
     original_accept_t original_accept = (original_accept_t)dlsym(RTLD_NEXT, "accept");
     all_initialisation();
-    int result;
-    if (result = original_accept(sockfd, adresse, longueur) != -1){
+    int result = original_accept(sockfd, adresse, longueur);
+    if (result != -1){
         left_tab[indice_left] = sockfd;
         indice_left++;
     }
@@ -209,14 +211,15 @@ ssize_t write(int fd, const void *buf, size_t count){
     original_write_t original_write = (original_write_t)dlsym(RTLD_NEXT, "write");
     all_initialisation();
 
-    if(type_preload(buf)=='R'){
+
+    if(count<4096){
         struct Buff_reel* buffer = malloc(sizeof(struct Buff_reel));
         buffer->type ='R';
         buffer->size = count ;
         buffer->preload= (char*)(buf);
         return original_write(fd,buffer, sizeof(struct Buff_reel));
     }
-    else if(type_preload(buf)=='V'){
+    else {
         //on écrit la valeur dans buffer share
         strcpy(buffer_share + identifiant,buf);
 
@@ -227,13 +230,8 @@ ssize_t write(int fd, const void *buf, size_t count){
         struct sockaddr_in clientAdresse;
         unsigned int addrLen = sizeof(clientAdresse);
 
-        if (getpeername(fd, (struct sockaddr *) &clientAdresse, &addrLen) == -1) {
-            perror("Erreur lors de l'extraction de l'adresse et du port");
-            exit(1);
-        }
         char ip[15];
-        inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, 15);
-        int port = ntohs(clientAdresse.sin_port);
+        int port = PORT_BE;
 	    //Initialisation de l'offset du buffer_share
 	    buffer->offset = 0; 
         buffer->ip =ip ;
