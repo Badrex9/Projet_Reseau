@@ -122,9 +122,6 @@ int initSocket(struct sockaddr_in * adresse){
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Fin de l'initialisation_6\n");
-    printf("On arrive à l'accept\n");
-
     return fdsocket;
 }
 int connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen){
@@ -142,14 +139,11 @@ int accept(int sockfd,  struct sockaddr *adresse, socklen_t * longueur){
 
     all_initialisation();
 
-    printf("FIn init\n");
     int result = original_accept(sockfd, adresse, longueur);
     if (result != -1){
         left_tab[indice_left] = sockfd;
         indice_left++;
-        printf("Fin accept\n");
     }
-    printf("Fin accept\n");
     return result;
 }
 
