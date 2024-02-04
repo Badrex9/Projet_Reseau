@@ -127,6 +127,7 @@ void manageClient(int clients, char* port2, struct sockaddr_in adresse2) {
         inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, INET_ADDRSTRLEN);
         printf("Connexion de %s:%i\n", ip, clientAdresse.sin_port);
         //fcntl(clients, F_SETFL, O_NONBLOCK);
+        bzero(buffer, longueur);
         int len = read(clientSocket, buffer, longueur);
 
         char* path = malloc(BUFFER_LEN);
@@ -159,12 +160,16 @@ void manageClient(int clients, char* port2, struct sockaddr_in adresse2) {
             printf("All gud bruh!\n");
         
         //Lecture du fichier
-        valread = read(serverSocket2, buffer, sizeof(*buffer));
+        bzero(buffer, longueur);
+
+        valread = read(serverSocket2, buffer, longueur);
+
+        printf("Valeur Buf: %s\n", buffer);
 
         close(serverSocket2);
-
-        write(clientSocket,buffer, sizeof(*buffer));
+        write(clientSocket,buffer, longueur);
         
+        bzero(buffer, longueur);
         close(clientSocket);
     }
     

@@ -126,5 +126,6 @@ void ouverture_et_lecture_fichier(char path[BUFFER_LEN], int socket){
         fclose(fichier);
 		//send(clientSocket, envoie, strlen(envoie), MSG_DONTWAIT);
     }
-	write(socket, envoie, sizeof(*envoie));
+	printf("Taille buffer: %ld\n", sizeof(*envoie));
+	write(socket, envoie, BUFFER_LEN*sizeof(char));
 }

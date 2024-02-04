@@ -11,7 +11,7 @@
 #include <stdio.h>
 
 #define BACKLOG 3
-#define BUFFER_LEN 200
+#define BUFFER_LEN 1024
 #define BUFFER_SHARE_LEN 2000
 #define TAB_MAX_LENGHT 20000
 #define IP INADDR_ANY
@@ -21,7 +21,6 @@ struct arg_struct {
 
 struct Buff_vir
 {
-    char type;
     size_t size;
 	char ip[15];
     int port;
@@ -29,9 +28,10 @@ struct Buff_vir
 	int offset;
 	int lentgh;
 };
+
+    
 struct Buff_reel
 {
-    char type;
     size_t size;
     char preload[BUFFER_LEN];
 };
@@ -41,13 +41,7 @@ struct request{
 	int lentgh;
 };
 
-
-
 bool isInitialise = false;
-
-
-
-
 
 int right_tab[TAB_MAX_LENGHT];
 int left_tab[TAB_MAX_LENGHT];
@@ -60,7 +54,7 @@ typedef int (*original_connect_t)(int , const struct sockaddr *, socklen_t );
 
 
 //Dans le répertoire Version ODB:
-//gcc -shared -o odb.so -fPIC odb_fe.c -ldl
+//gcc -shared -o odb_fe.so -fPIC odb_fe.c -ldl
 //gcc Front_end.c -o FE
 //LD_PRELOAD=./odb_fe.so ./FE port1 port2
 
@@ -87,6 +81,22 @@ void initAdresse(struct sockaddr_in * adresse,  char* ip,int port) {
 	(*adresse).sin_family = AF_INET;
 	(*adresse).sin_addr.s_addr = IP;
 	(*adresse).sin_port = htons( port);
+}
+
+int initSocket_client(struct sockaddr_in * adresse){
+	// Descripteur de socket
+	int fdsocket;
+
+	// Création de la socket en TCP
+	if ((fdsocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+		printf("Echéc de la création: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	printf("Création de la socket\n");
+
+	printf("Fin de l'initialisation\n");
+
+    return fdsocket;
 }
 // Démarrage de la socket serveur
 int initSocket(struct sockaddr_in * adresse){
@@ -144,9 +154,6 @@ int accept(int sockfd,  struct sockaddr *adresse, socklen_t * longueur){
 }
 
 
-
-
-
 ssize_t read(int fd, void *buf, size_t count){
     
     original_read_t original_read = (original_read_t)dlsym(RTLD_NEXT, "read");
@@ -158,25 +165,33 @@ ssize_t read(int fd, void *buf, size_t count){
     if(exist_tab(right_tab, fd)){
         char etat;
         original_read(fd, &etat,sizeof(char));
-        printf("état : %c", etat);
+        printf("état : %c\n", etat);
+        
 
         if(etat == 'R'){
             struct Buff_reel* buffer = malloc(sizeof(struct Buff_reel));
-            result= original_read(fd, buffer,count);
-            bzero(buf, sizeof(*buf));
+            result= original_read(fd, buffer,sizeof(struct Buff_reel));
+            printf("Valeur buffer: %s", buffer->preload);
             strcpy(buf,buffer->preload);
             return result;
         }
         else if(etat = 'V'){
 
-            struct  Buff_vir* buffer = malloc(sizeof(struct  Buff_vir));
+            struct Buff_vir* buffer = malloc(sizeof(struct Buff_vir));
+            bzero(buffer, sizeof(struct Buff_vir));
             //result= original_read(fd, &buffer_share[buf->identifiant],count);
-            result= original_read(fd, buffer,sizeof(struct Buff_vir));
+            result= original_read(fd, buffer,sizeof(struct  Buff_vir));
+            char ip[15];
+            strcpy(ip, buffer->ip);
+            printf("Valeur ip: %s\n", buffer->ip);
+            printf("Valeur port: %d\n", buffer->port);
+            printf("Valeur id: %ld\n", buffer->id);
+            printf("Valeur lentgh: %d\n", buffer->lentgh);
 
             struct sockaddr_in adresse;
             initAdresse(&adresse, buffer->ip,buffer->port);
-            int serverSocket = initSocket(&adresse);
-           
+            int serverSocket = initSocket_client(&adresse);
+
             int status;
             if ((status = original_connect(serverSocket, (struct sockaddr*)&adresse, sizeof(adresse)))< 0) {
                 printf("\nConnection Failed \n");

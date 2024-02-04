@@ -12,8 +12,8 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#define BUFFER_LEN 200
-#define BUFFER_SHARE_LEN 2000
+#define BUFFER_LEN 1024
+#define BUFFER_SHARE_LEN 50000
 #define PORT 5000
 #define IP INADDR_ANY
 #define BACKLOG 3
@@ -28,9 +28,8 @@ struct arg_struct {
 
 struct Buff_vir
 {
-    char type;
     size_t size;
-	char* ip;
+	char ip[15];
     int port;
 	long id;
 	int offset;
@@ -38,9 +37,8 @@ struct Buff_vir
 };
 struct Buff_reel
 {
-    char type;
     size_t size;
-    char* preload;
+    char preload[BUFFER_LEN];
 };
 
 struct request{
@@ -163,7 +161,7 @@ void *traitement(void *arguments){
 
 
 void all_initialisation(){
-    if (!isInitialise){ 
+        if (!isInitialise){ 
         bzero(buffer_share, BUFFER_SHARE_LEN*sizeof(char));
         isInitialise = true;
 
@@ -172,7 +170,8 @@ void all_initialisation(){
         bzero(left_tab, TAB_MAX_LENGHT*sizeof(int));
         indice_right = 0;
         indice_left = 0;
-        
+
+    
         //Créé le thread et initialise la socket si la variable PORT est renseignée lors de la compilation
         #ifndef PORT_BE
         #define PORT_BE 4000
@@ -214,30 +213,40 @@ ssize_t write(int fd, const void *buf, size_t count){
 
     if(count<4096){
         struct Buff_reel* buffer = malloc(sizeof(struct Buff_reel));
-        buffer->type ='R';
-        buffer->size = count ;
-        buffer->preload= (char*)(buf);
+        buffer->size = count;
+        strcpy(buffer->preload,buf);
+        printf("Buffer Preload: %s\n", buffer->preload);
+        printf("Size struct: %ld\n", sizeof(struct Buff_reel));
+        char etat = 'R';
+        original_write(fd,&etat, sizeof(char));
         return original_write(fd,buffer, sizeof(struct Buff_reel));
     }
     else {
         //on écrit la valeur dans buffer share
         strcpy(buffer_share + identifiant,buf);
 
-        struct Buff_vir* buffer = malloc(sizeof(struct  Buff_vir));
-        buffer->type ='v';
-        buffer->size = count ;
+        struct Buff_vir* buffer = malloc(sizeof(struct Buff_vir));
+        buffer->lentgh = count;
 
         struct sockaddr_in clientAdresse;
         unsigned int addrLen = sizeof(clientAdresse);
 
         char ip[15];
+        bzero(ip, 15);
         int port = PORT_BE;
 	    //Initialisation de l'offset du buffer_share
 	    buffer->offset = 0; 
-        buffer->ip =ip ;
-        buffer->port = port ;
+        strcpy(buffer->ip,ip);
+        buffer->port = port;
         buffer->id = identifiant ;   
         identifiant =+ buffer->lentgh ;
+        printf("Valeur ip: %s\n", buffer->ip);
+        printf("Valeur port: %d\n", buffer->port);
+        printf("Valeur id: %ld\n", buffer->id);
+        printf("Valeur lentgh: %d\n", buffer->lentgh);
+        printf("Valeur ofset: %d\n", buffer->offset);
+        char etat = 'V';
+        original_write(fd,&etat, sizeof(char));
         return original_write(fd,buffer,sizeof(struct Buff_vir));
     }
 }   
