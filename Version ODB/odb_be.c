@@ -227,6 +227,7 @@ ssize_t write(int fd, const void *buf, size_t count){
 
         struct Buff_vir* buffer = malloc(sizeof(struct Buff_vir));
         buffer->lentgh = count;
+        buffer->size=15*sizeof(char)+2*sizeof(int)+sizeof(long);
 
         struct sockaddr_in clientAdresse;
         unsigned int addrLen = sizeof(clientAdresse);

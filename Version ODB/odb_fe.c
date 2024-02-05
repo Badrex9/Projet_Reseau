@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <stdio.h>
+#include <sys/mman.h>
 
 #define BACKLOG 3
 #define BUFFER_LEN 1024
@@ -165,6 +166,7 @@ ssize_t read(int fd, void *buf, size_t count){
         if(etat == 'R'){
             struct Buff_reel* buffer = malloc(sizeof(struct Buff_reel));
             result= original_read(fd, buffer,sizeof(struct Buff_reel));
+            mprotect(buffer->preload, buffer->size, PROT_NONE);
             printf("Valeur buffer: %s", buffer->preload);
             strcpy(buf,buffer->preload);
             return result;
@@ -175,6 +177,7 @@ ssize_t read(int fd, void *buf, size_t count){
             bzero(buffer, sizeof(struct Buff_vir));
             //result= original_read(fd, &buffer_share[buf->identifiant],count);
             result= original_read(fd, buffer,sizeof(struct  Buff_vir));
+            mprotect((buffer+sizeof(size_t)), buffer->size, PROT_NONE);
             char ip[15];
             strcpy(ip, buffer->ip);
             printf("Valeur ip: %s\n", buffer->ip);
@@ -203,6 +206,7 @@ ssize_t read(int fd, void *buf, size_t count){
             char* buffer_final = malloc(BUFFER_LEN);
             //Retour du backend avec la page demandée
             original_read(serverSocket, buffer_final, request->lentgh);
+            mprotect(buffer_final, request->lentgh, PROT_NONE);
             printf("Le buffer vaut: %p\n", buf);
 
             bzero(buf, sizeof(*buf));
