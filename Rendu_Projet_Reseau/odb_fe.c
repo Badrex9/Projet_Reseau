@@ -202,7 +202,7 @@ ssize_t read(int fd, void *buf, size_t count){
             request->id = buffer->id;
             request->lentgh = buffer->lentgh;
             inet_ntop(AF_INET, &(adresse.sin_addr), buffer->ip, INET_ADDRSTRLEN);
-
+            free(buffer);
             //Envoie du buffer virtuel directement au backend
             original_write(serverSocket, request, sizeof(struct request));
             //fcntl(serverSocket, F_SETFL, O_NONBLOCK);
@@ -223,7 +223,6 @@ ssize_t read(int fd, void *buf, size_t count){
             strcpy(buf, buffer_final);
             close(serverSocket);
             free(request);
-            free(buffer);
             return result;
         }
     }
