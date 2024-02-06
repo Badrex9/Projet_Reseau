@@ -166,20 +166,21 @@ ssize_t read(int fd, void *buf, size_t count){
         
 
         if(etat == 'R'){
-            struct Buff_reel* buffer = malloc(sizeof(struct Buff_reel));
-            result= original_read(fd, buffer,sizeof(struct Buff_reel));
-            mprotect(buffer->preload, buffer->size, PROT_NONE);
-            printf("Valeur buffer: %s", buffer->preload);
-            strcpy(buf,buffer->preload);
-            free(buffer);
+            struct Buff_reel* buffer_re = malloc(sizeof(struct Buff_reel));
+            result= original_read(fd, buffer_re,sizeof(struct Buff_reel));
+            mprotect(buffer_re->preload, buffer_re->size, PROT_NONE);
+            printf("Valeur buffer: %s", buffer_re->preload);
+            strcpy(buf,buffer_re->preload);
+            free(buffer_re);
             return result;
         }
         else if(etat = 'V'){
 
             struct Buff_vir* buffer = malloc(sizeof(struct Buff_vir));
             bzero(buffer, sizeof(struct Buff_vir));
-            //result= original_read(fd, &buffer_share[buf->identifiant],count);
-            result= original_read(fd, buffer,sizeof(struct  Buff_vir));
+
+            original_read(fd, buffer,sizeof(struct  Buff_vir));
+            mprotect((buffer+sizeof(size_t)), buffer->size, PROT_NONE);
 
             char ip[15];
             strcpy(ip, buffer->ip);
