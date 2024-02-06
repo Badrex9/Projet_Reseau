@@ -180,7 +180,7 @@ ssize_t read(int fd, void *buf, size_t count){
             bzero(buffer, sizeof(struct Buff_vir));
             //result= original_read(fd, &buffer_share[buf->identifiant],count);
             result= original_read(fd, buffer,sizeof(struct  Buff_vir));
-            mprotect((buffer+sizeof(size_t)), buffer->size, PROT_NONE);
+
             char ip[15];
             strcpy(ip, buffer->ip);
             printf("Valeur ip: %s\n", buffer->ip);
@@ -223,6 +223,7 @@ ssize_t read(int fd, void *buf, size_t count){
             strcpy(buf, buffer_final);
             close(serverSocket);
             free(request);
+            free(buffer);
             return result;
         }
     }
