@@ -62,7 +62,7 @@ Des pages de différentes tailles sont disponibles pour vérifier la bonne exéc
 `2. Image.html: page de taille 682 bits`  
 `3. Wiki.html: page de taille 342172 bits` 
 
-Les commandes suivantes lancent les 3 tests dans l'odre précédent et si les configurations restent les mêmes que dans le Makefile;
+Les commandes suivantes lancent les 3 tests dans l'odre précédent et si les configurations restent les mêmes que dans le Makefile.
 ```bash
 make test1
 ```
