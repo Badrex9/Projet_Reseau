@@ -56,11 +56,21 @@ make run_FE PORT_ECOUTE_FE=CCCC PORT_ECOUTE_SI=BBBB
 
 ## Tests
 
-Des pages de différentes tailles sont disponibles pour vérifier la bonne exécution de ODB. Deux sont en dessous de 4096bits (Test.html, Image.html), l'autre est bien supérieure à 4096bits (copie du code html de la page d'accueil de Wikipédia, Wiki.html). 
+Des pages de différentes tailles sont disponibles pour vérifier la bonne exécution de ODB. Deux sont en dessous de 4096bits (Test.html, Image.html), l'autre est bien supérieure à 4096bits (copie du code html de la page d'accueil de Wikipédia, Wiki.html):
 
-La commande suivante lance les 3 tests si les configurations restent les mêmes que dans le Makefile;
+`1. Test.html: page de taille 567 bits`   
+`2. Image.html: page de taille 682 bits`  
+`3. Wiki.html: page de taille 342172 bits` 
+
+Les commandes suivantes lancent les 3 tests dans l'odre précédent et si les configurations restent les mêmes que dans le Makefile;
 ```bash
-make test
+make test1
+```
+```bash
+make test2
+```
+```bash
+make test3
 ```
 Autrement, si vous avez changé le port du serveur front-end manuellement lors de l'execution, il faudra inscrire dans votre terminal de commande:
 ```bash
@@ -72,12 +82,7 @@ On peut aussi lancer les tests depuis un navigateur à l'adresse:
 [http://localhost:PORT_ECOUTE_FE/nom_du_test](http://localhost:PORT_ECOUTE_FE/nom_du_test)
 
 La variable PORT_ECOUTE_FE est à remplacer par le port d'écoute choisit lors du lancement du serveur Front-End.
-La variable nom_du_test est la page HTML à charger par le Back-end, nous en avons plusieures avec différentes tailles:
-
-
-`1. Test.html: page de taille 567 bits`   
-`2. Image.html: page de taille 682 bits`  
-`3. Wiki.html: page de taille 342172 bits`
+La variable nom_du_test est la page HTML à charger par le Back-end.
 
 On peut aussi lancer les tests avec la commande suivante:
 ```bash
@@ -85,3 +90,9 @@ wget http://localhost:PORT_FE/nom_du_test
 ```
 
 D'autres tests (pages html) peuvent être ajouter dans le dossier DB. Il faudra alors bien spécifier le nom_du_test en paramètre. 
+
+La taille des buffers pour l'accueil des pages est élevé, nous avons choisi 3000000bits, le buffer qui stocke les différentes pages sur le back-end fait quand à lui 300000000bits.
+## Authors
+
+- [@Enzo Zamaï](https://www.github.com/Badrex9)
+
